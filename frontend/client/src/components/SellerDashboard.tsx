@@ -256,7 +256,7 @@ export function SellerDashboard() {
                       <p className="text-sm font-bold text-indigo-600">{formatPrice(p.price)}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
+                      <button disabled
                         onClick={() => handleToggleStock(p)}
                         className={`p-1.5 rounded-lg transition-colors ${p.in_stock ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}
                         title={p.in_stock ? 'Marquer épuisé' : 'Marquer en stock'}

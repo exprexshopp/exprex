@@ -338,13 +338,13 @@ const handleSubmit = async () => {
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Image du produit</label>
             <div className="space-y-2">
-              <input
+              {/* <input
                 value={form.image}
                 onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
                 type="url"
                 placeholder="https://..."
                 className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-indigo-300"
-              />
+              /> */}
               <label className="flex items-center justify-center gap-2 w-full px-3 py-2.5 border border-dashed border-indigo-300 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-sm font-semibold text-indigo-700 dark:text-indigo-200 cursor-pointer">
                 <Upload className="w-4 h-4" />
                 <span>{uploadingImage ? 'Téléchargement...' : 'Téléverser une image locale'}</span>

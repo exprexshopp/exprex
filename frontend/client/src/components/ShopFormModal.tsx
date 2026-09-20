@@ -140,7 +140,7 @@ export function ShopFormModal() {
           </div>
           {field('Adresse précise', 'location', 'text', 'Ex: Akwa, Boulevard de la Liberté')}
           {field('Téléphone', 'phone', 'tel', '+237699001122')}
-          {field('URL Logo (image)', 'logo', 'url', 'https://...')}
+          {/* {field('URL Logo (image)', 'logo', 'url', 'https://...')} */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Logo local (upload)</label>
             <input type="file" accept="image/*" onChange={handleLogoFileChange} className="w-full px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-indigo-300" />
