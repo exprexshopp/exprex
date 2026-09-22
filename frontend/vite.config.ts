@@ -1,14 +1,10 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import fs from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
-
-
-const plugins = [react(), tailwindcss()];
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins,
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -19,16 +15,18 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist", "public"),
     emptyOutDir: true,
   },
   server: {
     port: 3000,
-    strictPort: false, // Will find next available port if 3000 is busy
+    strictPort: false,
     host: true,
     allowedHosts: [
       "localhost",
       "127.0.0.1",
+      "exprex.vercel.app",
+      "exprex-bd.vercel.app",
     ],
     fs: {
       strict: true,
@@ -36,14 +34,14 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://exprex-bd.vercel.app',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
       '/storage': {
-        target: 'http://localhost:8000',
+        target: 'https://exprex-bd.vercel.app',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },
