@@ -251,7 +251,7 @@ export function AuthModal() {
           {mode === 'login' && (
             <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-xs text-slate-500">
               <p className="font-semibold mb-1">Authentification backend :</p>
-              <p>Utilisez vos identifiants. La clé admin sera demandée uniquement si le compte est administrateur.</p>
+              <p>Utilisez vos identifiants.</p>
             </div>
           )}
         </div>
