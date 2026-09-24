@@ -3,6 +3,8 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 let authToken: string | null = localStorage.getItem('access_token');
 let currentUser: any = null;
+let consecutiveErrors = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 
 // ✅ Cache pour éviter les appels redondants
@@ -38,25 +40,50 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+
+
+
+
+// ✅ Compteur d'erreurs consécutives pour éviter les faux positifs
+
 api.interceptors.response.use(
-  (response) => response, // Laisse passer les requêtes réussies
+  (response) => {
+    consecutiveErrors = 0;
+    return response;
+  },
   (error) => {
+    // ✅ Gestion 401 (déjà existant)
     if (error.response && error.response.status === 401) {
-      // Nettoyage des données d'authentification obsolètes
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_role');
       authToken = null;
       currentUser = null;
-
-      // Optionnel : Vous pouvez déclencher un événement personnalisé ou rediriger 
-      // pour que React affiche la modale de connexion sans recharger brutalement la page
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
+
+    // ✅ Détection des erreurs réseau massives
+    if (error.code === 'ERR_NETWORK') {
+      consecutiveErrors++;
+      console.warn(`⚠️ Erreur réseau (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        console.error('🚨 Trop d\'erreurs réseau consécutives, redirection...');
+        consecutiveErrors = 0;
+        // Éviter la boucle infinie
+        if (!window.location.pathname.includes('/error')) {
+          window.location.href = '/error';
+        }
+      }
+    } else {
+      consecutiveErrors = 0;
+    }
+
     return Promise.reject(error);
   }
 );
 
-// ============================================================
+
+
 // AUTH
 // ============================================================
 export const auth = {

@@ -44,6 +44,12 @@ function AppContent() {
   const isUpdatingFromUrl = useRef(false);
   const isUpdatingViewMode = useRef(false);
 
+  // route d'erreur
+  if (location === '/error') {
+    return <ErrorPage />;
+  }
+
+
   // ✅ Synchroniser l'URL avec viewMode (quand l'URL change)
   useEffect(() => {
     // Éviter les boucles
