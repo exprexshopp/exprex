@@ -5,6 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice } from '../lib/format';
 import { ShopHoursEditor } from './ShopHoursEditor';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 export function SellerDashboard() {
   const { currentUser, setShopModalData, setProductModalData, setViewMode, handleSelectShopVitrine, handleSelectProductDetail, bumpData, dataVersion } = useApp();
@@ -150,13 +152,12 @@ export function SellerDashboard() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex items-center gap-3">
-                {shop.logo ? (
-                  <img src={shop.logo} alt={shop.name} className="w-14 h-14 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-indigo-100 flex items-center justify-center">
-                    <Store className="w-7 h-7 text-indigo-600" />
-                  </div>
-                )}
+                <SafeImage
+  src={getImageUrl(shop.logo)}
+  alt={shop.name}
+  className="w-14 h-14 rounded-xl object-cover"
+  fallbackIcon={<Store className="w-7 h-7 text-indigo-600" />}
+/>
                 <div>
                   <h2 className="font-bold text-slate-900 dark:text-white">{shop.name}</h2>
                   <p className="text-sm text-slate-500">{shop.city}</p>
@@ -244,13 +245,12 @@ export function SellerDashboard() {
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {products.map(p => (
                   <div key={p.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                        <Package className="w-6 h-6 text-slate-400" />
-                      </div>
-                    )}
+                    <SafeImage
+  src={getImageUrl(p.image)}
+  alt={p.name}
+  className="w-12 h-12 rounded-xl object-cover shrink-0"
+  fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
+/>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</p>
                       <p className="text-sm font-bold text-indigo-600">{formatPrice(p.price)}</p>

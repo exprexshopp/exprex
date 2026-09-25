@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     UPLOAD_DIR: Path = Path("./static/storage")
+    CLOUDINARY_URL: str = ""
     
     class Config:
         extra = "ignore"

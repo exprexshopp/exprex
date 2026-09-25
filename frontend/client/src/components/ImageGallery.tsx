@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 interface ImageGalleryProps {
   images: string[];
@@ -52,12 +54,11 @@ export function ImageGallery({ images, mainImage, productName }: ImageGalleryPro
         className="relative w-full aspect-[4/3] md:aspect-auto md:h-full bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden cursor-zoom-in"
         onClick={handleZoom}
       >
-        <img
-          src={selectedImage}
-          alt={productName}
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-          loading="lazy"
-        />
+        <SafeImage
+  src={getImageUrl(selectedImage)}
+  alt={productName}
+  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+/>
         
         {/* Navigation arrows - Desktop */}
         {uniqueImages.length > 1 && (
@@ -103,12 +104,11 @@ export function ImageGallery({ images, mainImage, productName }: ImageGalleryPro
                   : 'border-transparent hover:border-slate-300'
               }`}
             >
-              <img
-                src={img}
-                alt={`${productName} - ${index + 1}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <SafeImage
+  src={getImageUrl(img)}
+  alt={`${productName} - ${index + 1}`}
+  className="w-full h-full object-cover"
+/>
               {selectedImage === img && (
                 <div className="absolute inset-0 bg-indigo-600/10" />
               )}
@@ -131,11 +131,11 @@ export function ImageGallery({ images, mainImage, productName }: ImageGalleryPro
           </button>
           
           <div className="relative max-w-5xl max-h-[90vh] w-full h-full">
-            <img
-              src={selectedImage}
-              alt={productName}
-              className="w-full h-full object-contain"
-            />
+            <SafeImage
+  src={getImageUrl(selectedImage)}
+  alt={productName}
+  className="w-full h-full object-contain"
+/>
             
             {uniqueImages.length > 1 && (
               <>

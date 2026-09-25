@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Package, Upload, Store } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 export function ProductFormModal() {
   const { productModalData, setProductModalData, currentUser, handleSaveProduct, dataVersion } = useApp();
@@ -370,13 +372,13 @@ const handleSubmit = async () => {
               </label>
             </div>
             {form.image && (
-              <img
-                src={form.image}
-                alt="preview"
-                className="mt-2 w-full h-32 object-cover rounded-xl"
-                onError={e => (e.target as HTMLImageElement).style.display = 'none'}
-              />
-            )}
+  <SafeImage
+    src={getImageUrl(form.image)}
+    alt="preview"
+    className="mt-2 w-full h-32 object-cover rounded-xl"
+    fallbackIcon={<Package className="w-8 h-8 text-slate-400" />}
+  />
+)}
           </div>
         </div>
         <div className="p-5 border-t border-slate-100 dark:border-slate-700 flex gap-3 shrink-0">

@@ -5,6 +5,8 @@ import { Product } from '../types';
 import { formatPrice } from '../lib/format';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 interface ProductCardProps {
   product: Product;
@@ -76,18 +78,12 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
     >
       {/* Image */}
       <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-700 overflow-hidden">
-        {product.image ? (
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ShoppingBag className="w-12 h-12 text-slate-300" />
-          </div>
-        )}
+        <SafeImage
+  src={getImageUrl(product.image)}
+  alt={product.name}
+  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+  fallbackIcon={<ShoppingBag className="w-12 h-12 text-slate-300" />}
+/>
         {/* Overlay actions */}
         <div className="absolute top-2 right-2 flex gap-1.5">
           {currentUser && (

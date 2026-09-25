@@ -8,6 +8,8 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice, formatDate, isShopOpenNow } from '../lib/format';
 import { ImageGallery } from './ImageGallery';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 export function ProductDetail() {
   const { 
@@ -216,13 +218,12 @@ export function ProductDetail() {
           {shop && (
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
-                {shop.logo ? (
-                  <img src={shop.logo} alt={shop.name} className="w-12 h-12 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-                    <Store className="w-6 h-6 text-indigo-600" />
-                  </div>
-                )}
+                <SafeImage
+  src={getImageUrl(shop.logo)}
+  alt={shop.name}
+  className="w-12 h-12 rounded-xl object-cover"
+  fallbackIcon={<Store className="w-6 h-6 text-indigo-600" />}
+/>
                 <div className="flex-1 min-w-0">
                   <button 
                     onClick={() => handleSelectShopVitrine(shop.slug)}
