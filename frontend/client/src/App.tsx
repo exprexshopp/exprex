@@ -26,6 +26,7 @@ import { ShopFormModal } from "./components/ShopFormModal";
 import { ProductFormModal } from "./components/ProductFormModal";
 import { PlatformSettingsModal } from "./components/PlatformSettingsModal";
 import { DjangoAdminAuthModal } from "./components/DjangoAdminAuthModal";
+import { ErrorPage } from ".pages/ErrorPage";
 
 function AppContent() {
   const { 
