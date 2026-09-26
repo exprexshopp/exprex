@@ -13,7 +13,8 @@ export function ShopPublicVitrine() {
     selectedShopSlug, 
     handleNavigateHome, 
     handleSelectProductDetail, 
-    handleQuickWhatsApp
+    handleQuickWhatsApp,
+    dataVersion
   } = useApp();
   
   const [shop, setShop] = useState<any>(null);
@@ -22,48 +23,58 @@ export function ShopPublicVitrine() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const loadShopData = async () => {
-      if (!selectedShopSlug) {
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      try {
-        const shopData = await db.getShopBySlug(selectedShopSlug);
-        setShop(shopData);
-        
-        // ✅ Parser les horaires
-        if (shopData) {
-          try {
-            const hoursData = typeof shopData.hours === 'string' 
-              ? JSON.parse(shopData.hours) 
-              : shopData.hours;
-            setIsOpen(hoursData ? isShopOpenNow(hoursData) : false);
-          } catch (e) {
-            console.warn('Erreur parsing horaires:', e);
-            setIsOpen(false);
-          }
-          
-          const allProducts = await db.getProductsForShop(shopData.id);
-          setProducts(Array.isArray(allProducts) ? allProducts : []);
-        } else {
+  let cancelled = false;
+
+  const loadShopData = async () => {
+    if (!selectedShopSlug) {
+      if (!cancelled) setLoading(false);
+      return;
+    }
+
+    if (!cancelled) setLoading(true);
+    try {
+      const shopData = await db.getShopBySlug(selectedShopSlug);
+      if (cancelled) return;
+
+      setShop(shopData);
+
+      if (shopData) {
+        try {
+          const hoursData = typeof shopData.hours === 'string'
+            ? JSON.parse(shopData.hours)
+            : shopData.hours;
+          if (!cancelled) setIsOpen(hoursData ? isShopOpenNow(hoursData) : false);
+        } catch (e) {
+          console.warn('Erreur parsing horaires:', e);
+          if (!cancelled) setIsOpen(false);
+        }
+
+        const allProducts = await db.getProductsForShop(shopData.id);
+        if (!cancelled) setProducts(Array.isArray(allProducts) ? allProducts : []);
+      } else {
+        if (!cancelled) {
           setProducts([]);
           setIsOpen(false);
         }
-      } catch (error) {
-        console.error('Erreur chargement boutique:', error);
+      }
+    } catch (error) {
+      console.error('Erreur chargement boutique:', error);
+      if (!cancelled) {
         setShop(null);
         setProducts([]);
         setIsOpen(false);
-      } finally {
-        setLoading(false);
       }
-    };
-    
-    loadShopData();
-  }, [selectedShopSlug]);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
 
+  loadShopData();
+
+  return () => { cancelled = true; };
+}, [selectedShopSlug, dataVersion]);
+
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
