@@ -19,6 +19,7 @@ export function SafeImage({
   const isValidSrc = src && typeof src === 'string' && src.trim() !== '' 
     && src !== 'null' && src !== 'undefined';
 
+  // ✅ Si src invalide ou erreur → fallback
   if (!isValidSrc || hasError) {
     return (
       <div className={cn(
@@ -31,21 +32,25 @@ export function SafeImage({
   }
 
   return (
-    <>
+    <div className={cn("relative overflow-hidden", className)}>
+      {/* ✅ Spinner superposé, PAS en display:none sur l'image */}
       {isLoading && (
-        <div className={cn("flex items-center justify-center bg-slate-100 dark:bg-slate-800", className)}>
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
           <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
       <img
         src={src}
         alt={alt}
-        className={cn(className, isLoading && "hidden")}
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-300",
+          isLoading ? "opacity-0" : "opacity-100"
+        )}
         onError={() => { setHasError(true); setIsLoading(false); }}
         onLoad={() => setIsLoading(false)}
-        loading="lazy"
+        loading="eager"
         {...props}
       />
-    </>
+    </div>
   );
 }

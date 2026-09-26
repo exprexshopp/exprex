@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Store, MapPin, Search } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
+import { SafeImage } from './SafeImage';
+import { getImageUrl } from '@/lib/imageUrl';
 
 export function ShopsDrawer() {
   const { isShopsDrawerOpen, setIsShopsDrawerOpen, handleSelectShopVitrine } = useApp();
@@ -90,7 +92,12 @@ export function ShopsDrawer() {
                   {shop.is_active && shop.status === 'ACTIVE' && (
                     <div className='flex items-center gap-4 rounded-2xl'>
                       {shop.logo ? (
-                        <img src={shop.logo} alt={shop.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                        <SafeImage
+  src={getImageUrl(shop.logo)}
+  alt={shop.name}
+  className="w-12 h-12 rounded-xl object-cover shrink-0"
+  fallbackIcon={<Store className="w-6 h-6 text-indigo-600" />}
+/>
                       ) : (
                         <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
                           <Store className="w-6 h-6 text-indigo-600" />

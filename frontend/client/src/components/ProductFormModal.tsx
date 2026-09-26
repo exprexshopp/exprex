@@ -25,41 +25,30 @@ export function ProductFormModal() {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Charger la boutique du vendeur à l'ouverture
+    // Charger la boutique du vendeur à l'ouverture
   useEffect(() => {
+    if (!isOpen || !currentUser) return;
+
+    let cancelled = false;
     const fetchShop = async () => {
-      if (!currentUser) return;
       try {
         setLoadingShop(true);
-        // Assurez-vous d'attendre la réponse si getShopByOwner est asynchrone
-        // const shop = await db.getShopByOwner(currentUser.id);
-        const [shop, setShop] = useState<any>(null);
-
-        useEffect(() => {
-          const loadShop = async () => {
-            if (currentUser) {
-              const shopData = await db.getShopByOwner(currentUser.id);
-              setShop(shopData);
-            }
-          };
-          loadShop();
-        }, [currentUser]);
-
-        
-        if (shop) {
-          setShopId(shop.id);
+        const shopData = await db.getShopByOwner(currentUser.id);
+        if (!cancelled) {
+          setShopId(shopData?.id || null);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération de la boutique", error);
+        if (!cancelled) setShopId(null);
       } finally {
-        setLoadingShop(false);
+        if (!cancelled) setLoadingShop(false);
       }
     };
 
-    if (isOpen) {
-      fetchShop();
-    }
-  }, [isOpen, currentUser]);
+    fetchShop();
+
+    return () => { cancelled = true; };
+  }, [isOpen, currentUser?.id]);
 
   // ✅ Charger les catégories
   // useEffect(() => {

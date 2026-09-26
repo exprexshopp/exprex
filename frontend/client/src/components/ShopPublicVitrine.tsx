@@ -22,6 +22,7 @@ export function ShopPublicVitrine() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const loadShopData = async () => {
       if (!selectedShopSlug) {
         setLoading(false);
@@ -62,7 +63,8 @@ export function ShopPublicVitrine() {
     };
     
     loadShopData();
-  }, [selectedShopSlug]);
+    return () => { cancelled = true; };
+  }, [selectedShopSlug, dataVersion]);
 
   if (loading) {
     return (

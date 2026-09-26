@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { Navigate } from 'wouter';
+import api from '../services/db';  // ✅ Ou import { default as api } from '../services/db'
 
 interface AdminGuardProps {
   children: ReactNode;
