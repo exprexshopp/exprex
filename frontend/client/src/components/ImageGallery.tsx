@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
+import React, { useState, useEffect } from 'react';
 
 interface ImageGalleryProps {
   images: string[];
@@ -13,6 +14,11 @@ export function ImageGallery({ images, mainImage, productName }: ImageGalleryPro
   const [selectedImage, setSelectedImage] = useState(mainImage);
   const [isZoomed, setIsZoomed] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+  setSelectedImage(mainImage);
+  setCurrentIndex(0);
+}, [mainImage]);
 
   // ✅ S'assurer que les images sont un tableau
   const allImages = [mainImage, ...images.filter(img => img !== mainImage)].filter(Boolean);

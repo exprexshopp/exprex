@@ -1,10 +1,10 @@
 /**
- * Normalise une URL d'image (absolue, relative, base64, vide).
+ * Normalise une URL d'image (absolue, relative, base64, vide)
+ * ET optimise automatiquement les URLs Cloudinary pour mobile.
  * 
- * - Les images statiques du bundle (/storage/xxx.webp) restent relatives
- *   car elles sont servies par le frontend Vercel lui-même.
- * - Les images Cloudinary (https://res.cloudinary.com/...) passent telles quelles.
- * - Les images base64 (data:image/...) passent telles quelles.
+ * - Images statiques (/storage/xxx.webp) → tel quel (servies par Vercel frontend)
+ * - Images Cloudinary → ajout de f_auto,q_auto,w_800,c_limit
+ * - Images base64 (data:image/...) → tel quel
  */
 export function getImageUrl(path: string | null | undefined): string | null {
   if (!path || typeof path !== 'string') return null;
@@ -12,13 +12,25 @@ export function getImageUrl(path: string | null | undefined): string | null {
   const trimmed = path.trim();
   if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return null;
   
+  // ✅ Cloudinary → ajouter paramètres d'optimisation
+  if (trimmed.includes('res.cloudinary.com') && trimmed.includes('/upload/')) {
+    // Éviter de double-ajouter les paramètres si déjà présents
+    if (trimmed.includes('/upload/f_auto') || trimmed.includes('/upload/q_auto')) {
+      return trimmed;
+    }
+    
+    // Insérer les transformations AVANT le /upload/ existant
+    return trimmed.replace(
+      '/upload/',
+      '/upload/f_auto,q_auto,w_800,c_limit/'
+    );
+  }
+  
   // Absolue ou base64 → tel quel
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
   }
   
   // ✅ Relative (/storage/xxx.webp) → tel quel
-  // Ces images sont servies par le frontend Vercel (public/storage/)
-  // OU proxifiées vers le backend selon la config Vite
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
 }

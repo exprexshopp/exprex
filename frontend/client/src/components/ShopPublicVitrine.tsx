@@ -23,58 +23,57 @@ export function ShopPublicVitrine() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  const loadShopData = async () => {
-    if (!selectedShopSlug) {
-      if (!cancelled) setLoading(false);
-      return;
-    }
+    const loadShopData = async () => {
+      if (!selectedShopSlug) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
 
-    if (!cancelled) setLoading(true);
-    try {
-      const shopData = await db.getShopBySlug(selectedShopSlug);
-      if (cancelled) return;
+      if (!cancelled) setLoading(true);
+      try {
+        const shopData = await db.getShopBySlug(selectedShopSlug);
+        if (cancelled) return;
 
-      setShop(shopData);
+        setShop(shopData);
 
-      if (shopData) {
-        try {
-          const hoursData = typeof shopData.hours === 'string'
-            ? JSON.parse(shopData.hours)
-            : shopData.hours;
-          if (!cancelled) setIsOpen(hoursData ? isShopOpenNow(hoursData) : false);
-        } catch (e) {
-          console.warn('Erreur parsing horaires:', e);
-          if (!cancelled) setIsOpen(false);
+        if (shopData) {
+          try {
+            const hoursData = typeof shopData.hours === 'string'
+              ? JSON.parse(shopData.hours)
+              : shopData.hours;
+            if (!cancelled) setIsOpen(hoursData ? isShopOpenNow(hoursData) : false);
+          } catch (e) {
+            console.warn('Erreur parsing horaires:', e);
+            if (!cancelled) setIsOpen(false);
+          }
+
+          const allProducts = await db.getProductsForShop(shopData.id);
+          if (!cancelled) setProducts(Array.isArray(allProducts) ? allProducts : []);
+        } else {
+          if (!cancelled) {
+            setProducts([]);
+            setIsOpen(false);
+          }
         }
-
-        const allProducts = await db.getProductsForShop(shopData.id);
-        if (!cancelled) setProducts(Array.isArray(allProducts) ? allProducts : []);
-      } else {
+      } catch (error) {
+        console.error('Erreur chargement boutique:', error);
         if (!cancelled) {
+          setShop(null);
           setProducts([]);
           setIsOpen(false);
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error('Erreur chargement boutique:', error);
-      if (!cancelled) {
-        setShop(null);
-        setProducts([]);
-        setIsOpen(false);
-      }
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
+    };
 
-  loadShopData();
+    loadShopData();
 
-  return () => { cancelled = true; };
-}, [selectedShopSlug, dataVersion]);
+    return () => { cancelled = true; };
+  }, [selectedShopSlug, dataVersion]);
 
-  
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -99,27 +98,26 @@ export function ShopPublicVitrine() {
 
   return (
     <div className="space-y-4">
-      {/* Back button */}
       <button onClick={handleNavigateHome} className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 transition-colors group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span className="text-sm font-medium">Retour au catalogue</span>
       </button>
 
-      {/* Shop header */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm">
         {shop.logo && (
-  <div className="w-full h-32 bg-slate-100 dark:bg-slate-700 overflow-hidden">
-    <SafeImage src={getImageUrl(shop.logo)} alt={shop.name} className="w-full h-full object-cover" />
-  </div>
-)}
+          <div className="w-full h-32 bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <SafeImage src={getImageUrl(shop.logo)} alt={shop.name} className="w-full h-full" />
+          </div>
+        )}
         <div className="p-5">
           <div className="flex items-start gap-4">
             <SafeImage
-  src={getImageUrl(shop.logo)}
-  alt={shop.name}
-  className="w-16 h-16 rounded-xl object-cover shrink-0 -mt-8 border-4 border-white dark:border-slate-800 shadow-md"
-  fallbackIcon={<Store className="w-8 h-8 text-indigo-600" />}
-/>
+              src={getImageUrl(shop.logo)}
+              alt={shop.name}
+              square
+              className="w-16 h-16 rounded-xl shrink-0 -mt-8 border-4 border-white dark:border-slate-800 shadow-md"
+              fallbackIcon={<Store className="w-8 h-8 text-indigo-600" />}
+            />
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">{shop.name}</h1>
               <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
@@ -163,7 +161,6 @@ export function ShopPublicVitrine() {
         </div>
       </div>
 
-      {/* Products */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <Package className="w-5 h-5 text-indigo-600" />
@@ -186,7 +183,6 @@ export function ShopPublicVitrine() {
         )}
       </div>
 
-      {/* Trending products */}
       {trendingProducts.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
@@ -197,11 +193,12 @@ export function ShopPublicVitrine() {
             {trendingProducts.map((product) => (
               <div key={product.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer" onClick={() => handleSelectProductDetail(product.slug)}>
                 <SafeImage
-  src={getImageUrl(product.image)}
-  alt={product.name}
-  className="w-16 h-16 rounded-xl object-cover shrink-0"
-  fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
-/>
+                  src={getImageUrl(product.image)}
+                  alt={product.name}
+                  square
+                  className="w-16 h-16 rounded-xl shrink-0"
+                  fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{product.name}</p>
                   <p className="text-sm font-bold text-indigo-600">{formatPrice(product.price)}</p>

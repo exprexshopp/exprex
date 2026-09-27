@@ -81,15 +81,22 @@ export function ProductDetail() {
   }, [selectedProductSlug, dataVersion]);
 
   // ✅ Recharger les favoris quand l'utilisateur change
-  useEffect(() => {
-    if (product && currentUser) {
-      const checkFav = async () => {
-        const favStatus = await db.isFavorite(currentUser.id, product.id);
-        setIsFav(favStatus);
-      };
-      checkFav();
+useEffect(() => {
+  if (!product?.id || !currentUser) return;
+  
+  let cancelled = false;
+  const checkFav = async () => {
+    try {
+      const favStatus = await db.isFavorite(currentUser.id, product.id);
+      if (!cancelled) setIsFav(favStatus);
+    } catch (error) {
+      console.error('Erreur vérif favori:', error);
     }
-  }, [currentUser, product]);
+  };
+  checkFav();
+  
+  return () => { cancelled = true; };
+}, [currentUser?.id, product?.id]);  // ✅ IDs (primitifs) au lieu d'objets
 
   if (loading) {
     return (
