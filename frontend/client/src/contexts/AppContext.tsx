@@ -92,14 +92,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Chargement initial de l'utilisateur
   useEffect(() => {
-    const loadUser = async () => {
+  const loadUser = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;  // Pas de token, pas la peine d'appeler
+
+    // Essayer 2 fois (avec 1s de délai) avant d'abandonner
+    for (let i = 0; i < 2; i++) {
       const user = await db.refreshCurrentUser();
       if (user) {
         setCurrentUser(user);
+        return;
       }
-    };
-    loadUser();
-  }, []);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  };
+  loadUser();
+}, []);
 
   // Rafraîchissement de l'utilisateur
   const refreshUser = useCallback(async () => {

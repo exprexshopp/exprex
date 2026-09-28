@@ -150,18 +150,26 @@ export const auth = {
 
   // Recharger l'utilisateur depuis le backend
   refreshCurrentUser: async () => {
-    if (!authToken) return null;
-    try {
-      const userResponse = await api.get('/users/me');
-      currentUser = userResponse.data;
-      return currentUser;
-    } catch (error) {
+  if (!authToken) return null;
+  try {
+    const userResponse = await api.get('/users/me');
+    currentUser = userResponse.data;
+    return currentUser;
+  } catch (error: any) {
+    // ✅ Ne supprimer le token QUE sur un vrai 401 (session invalide)
+    // Pas sur ERR_NETWORK, timeout, 500, etc.
+    if (error?.response?.status === 401) {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user_role');
       authToken = null;
       currentUser = null;
       return null;
     }
-  },
+    // Erreur réseau/backend : garder le token, retourner null sans déconnecter
+    console.warn('refreshCurrentUser: erreur réseau, session préservée', error?.message);
+    return null;
+  }
+},
 };
 
 // ============================================================
