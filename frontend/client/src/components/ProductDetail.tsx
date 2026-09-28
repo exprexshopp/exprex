@@ -29,57 +29,84 @@ export function ProductDetail() {
   const [isShopOpen, setIsShopOpen] = useState(false);
 
   // ✅ Charger les données du produit
-  useEffect(() => {
-    const loadProductData = async () => {
-      if (!selectedProductSlug) {
-        setLoading(false);
-        return;
-      }
+  // ✅ Charger les données du produit (UNE SEULE FOIS par slug)
+useEffect(() => {
+  if (!selectedProductSlug) {
+    setLoading(false);
+    return;
+  }
 
-      setLoading(true);
-      try {
-        const productData = await db.getProductBySlug(selectedProductSlug);
-        setProduct(productData);
+  let cancelled = false;
+  const loadProductData = async () => {
+    setLoading(true);
+    try {
+      const productData = await db.getProductBySlug(selectedProductSlug);
+      if (cancelled) return;
+      setProduct(productData);
 
-        if (productData) {
-          const reviewsData = await db.getProductReviews(productData.id);
-          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      if (productData) {
+        const reviewsData = await db.getProductReviews(productData.id);
+        if (cancelled) return;
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
 
-          const shopData = await db.getShopBySlug(productData.shop_slug);
-          setShop(shopData);
-          
-          // ✅ Vérifier si la boutique est ouverte
-          if (shopData && shopData.hours) {
-            try {
-              const hoursData = typeof shopData.hours === 'string' 
-                ? JSON.parse(shopData.hours) 
-                : shopData.hours;
-              setIsShopOpen(isShopOpenNow(hoursData));
-            } catch {
-              setIsShopOpen(false);
-            }
-          }
+        const shopData = await db.getShopBySlug(productData.shop_slug);
+        if (cancelled) return;
+        setShop(shopData);
 
-          db.recordView(productData.id);
-
-          if (currentUser) {
-            const favStatus = await db.isFavorite(currentUser.id, productData.id);
-            setIsFav(favStatus);
+        if (shopData && shopData.hours) {
+          try {
+            const hoursData = typeof shopData.hours === 'string'
+              ? JSON.parse(shopData.hours)
+              : shopData.hours;
+            if (!cancelled) setIsShopOpen(isShopOpenNow(hoursData));
+          } catch {
+            if (!cancelled) setIsShopOpen(false);
           }
         }
-      } catch (error) {
-        console.error('Erreur chargement produit:', error);
+
+        // ✅ recordView déclenche bumpData → risque de boucle si dataVersion est en dépendance
+        db.recordView(productData.id);
+
+        if (currentUser) {
+          const favStatus = await db.isFavorite(currentUser.id, productData.id);
+          if (!cancelled) setIsFav(favStatus);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement produit:', error);
+      if (!cancelled) {
         setProduct(null);
         setReviews([]);
         setShop(null);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
 
-    loadProductData();
-  }, [selectedProductSlug, dataVersion]);
+  loadProductData();
+  return () => { cancelled = true; };
+}, [selectedProductSlug]);  // ✅ RETIRÉ dataVersion
 
+  // ✅ Recharger les avis quand dataVersion change (sans refaire recordView)
+useEffect(() => {
+  if (!product?.id) return;
+
+  let cancelled = false;
+  const reloadReviews = async () => {
+    try {
+      const reviewsData = await db.getProductReviews(product.id);
+      if (!cancelled) setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+    } catch (error) {
+      console.error('Erreur rechargement avis:', error);
+    }
+  };
+
+  reloadReviews();
+  return () => { cancelled = true; };
+}, [dataVersion, product?.id]);
+
+  
   // ✅ Recharger les favoris quand l'utilisateur change
 useEffect(() => {
   if (!product?.id || !currentUser) return;

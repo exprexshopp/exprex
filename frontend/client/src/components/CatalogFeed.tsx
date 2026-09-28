@@ -87,49 +87,53 @@ export function CatalogFeed() {
   //   }, [dataVersion]);
 
   useEffect(() => {
-    const abortController = new AbortController();
+  const abortController = new AbortController();
 
-    const loadAllData = async () => {
-      setLoading(true);
-      try {
-        // ✅ Passer le signal à axios via l'API
-        const [categoriesData, catalogData, shopsData] = await Promise.all([
-          db.getCategories().catch(() => []),
-          db.getCatalogProducts(filterParams).catch(() => ({ products: [], total: 0, filterSummary: '' })),
-          db.getActiveShops(filterParams.city).catch(() => [])
-        ]);
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [categoriesData, catalogData, shopsData] = await Promise.all([
+        db.getCategories().catch(() => []),
+        db.getCatalogProducts(filterParams).catch(() => ({ products: [], total: 0, filterSummary: '' })),
+        db.getActiveShops(filterParams.city).catch(() => [])
+      ]);
 
-        // ✅ Vérifier si le composant est toujours monté
-        if (!abortController.signal.aborted) {
-          setCategories(categoriesData || []);
-          setCatalogData(catalogData || { products: [], total: 0, filterSummary: '' });
-          setActiveShops(shopsData || []);
+      if (!abortController.signal.aborted) {
+        setCategories(categoriesData || []);
+        setCatalogData(catalogData || { products: [], total: 0, filterSummary: '' });
+        setActiveShops(shopsData || []);
 
-          const cities = (shopsData || [])
-            .filter((shop: any) => shop.is_active && shop.status === 'ACTIVE' && shop.city)
-            .map((shop: any) => shop.city as string);
-          const unique = Array.from(new Set(cities)).sort((a, b) => String(a).localeCompare(String(b)));
-          setCityOptions(unique as string[]);
-        }
-
-      } catch (error) {
-        if (!abortController.signal.aborted) {
-          console.error('Erreur chargement données:', error);
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
+        const cities = (shopsData || [])
+          .filter((shop: any) => shop.is_active && shop.status === 'ACTIVE' && shop.city)
+          .map((shop: any) => shop.city as string);
+        const unique = Array.from(new Set(cities)).sort((a, b) => String(a).localeCompare(String(b)));
+        setCityOptions(unique as string[]);
       }
-    };
+    } catch (error) {
+      if (!abortController.signal.aborted) {
+        console.error('Erreur chargement données:', error);
+      }
+    } finally {
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  };
 
-    loadAllData();
+  loadAllData();
+  return () => { abortController.abort(); };
+  // ✅ Dépendances primitives au lieu de l'objet filterParams
+}, [
+  filterParams.city,
+  filterParams.q,
+  filterParams.category,
+  filterParams.subcategory,
+  filterParams.price_min,
+  filterParams.price_max,
+  dataVersion
+]);
 
-    return () => {
-      abortController.abort();
-    };
-  }, [filterParams, dataVersion]);
-
+  
   const hasFilters = filterParams.city || filterParams.q || filterParams.category || filterParams.price_min || filterParams.price_max;
 
   const applyPriceFilter = () => {
