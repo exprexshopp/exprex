@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';

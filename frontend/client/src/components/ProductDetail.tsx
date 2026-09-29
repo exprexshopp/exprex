@@ -15,7 +15,7 @@ export function ProductDetail() {
   const { 
     currentUser, selectedProductSlug, handleNavigateHome, 
     handleSelectShopVitrine, handleQuickWhatsApp, 
-    handleOpenAuthModal, bumpData, dataVersion 
+    handleOpenAuthModal
   } = useApp();
   
   const [product, setProduct] = useState<any>(null);
@@ -62,10 +62,14 @@ useEffect(() => {
           } catch {
             if (!cancelled) setIsShopOpen(false);
           }
+        } else {
+          setIsShopOpen(false);
         }
 
-        // ✅ recordView déclenche bumpData → risque de boucle si dataVersion est en dépendance
-        db.recordView(productData.id);
+        // Analytics : enregistrer la vue sans modifier l'état global React.
+        void db.recordView(productData.id).catch((error) => {
+          console.warn("Impossible d'enregistrer la vue du produit:", error);
+        });
 
         if (currentUser) {
           const favStatus = await db.isFavorite(currentUser.id, productData.id);
@@ -88,25 +92,6 @@ useEffect(() => {
   return () => { cancelled = true; };
 }, [selectedProductSlug]);  // ✅ RETIRÉ dataVersion
 
-  // ✅ Recharger les avis quand dataVersion change (sans refaire recordView)
-useEffect(() => {
-  if (!product?.id) return;
-
-  let cancelled = false;
-  const reloadReviews = async () => {
-    try {
-      const reviewsData = await db.getProductReviews(product.id);
-      if (!cancelled) setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-    } catch (error) {
-      console.error('Erreur rechargement avis:', error);
-    }
-  };
-
-  reloadReviews();
-  return () => { cancelled = true; };
-}, [dataVersion, product?.id]);
-
-  
   // ✅ Recharger les favoris quand l'utilisateur change
 useEffect(() => {
   if (!product?.id || !currentUser) return;
@@ -155,7 +140,6 @@ useEffect(() => {
     }
     const next = await db.toggleFavorite(currentUser.id, product.id);
     setIsFav(next);
-    bumpData();
   };
 
   const handleSubmitReview = async () => {
@@ -177,7 +161,6 @@ useEffect(() => {
       
       const reviewsData = await db.getProductReviews(product.id);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-      bumpData();
     } catch (error) {
       console.error('Erreur sauvegarde avis:', error);
     }

@@ -21,66 +21,119 @@ export function CatalogFeed() {
   const [priceMax, setPriceMax] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // États pour les données asynchrones
   const [categories, setCategories] = useState<any[]>([]);
   const [catalogData, setCatalogData] = useState({ products: [], total: 0, filterSummary: '' });
   const [activeShops, setActiveShops] = useState<any[]>([]);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
 
+  // Chargement des catégories
+  //   useEffect(() => {
+  //     const loadCategories = async () => {
+  //       try {
+  //         const data = await db.getCategories();
+  //         setCategories(data || []);
+  //       } catch (error) {
+  //         console.error('Erreur chargement catégories:', error);
+  //       }
+  //     };
+  //     loadCategories();
+  //   }, [dataVersion]);
+
+  //   // Chargement du catalogue
+  //   useEffect(() => {
+  //     const loadCatalog = async () => {
+  //       setLoading(true);
+  //       try {
+  //         const data = await db.getCatalogProducts(filterParams);
+  //         setCatalogData(data || { products: [], total: 0, filterSummary: '' });
+  //       } catch (error) {
+  //         console.error('Erreur chargement catalogue:', error);
+  //       } finally {
+  //         setLoading(false);
+  //       }
+  //     };
+  //     loadCatalog();
+  //   }, [filterParams, dataVersion]);
+
+  //   // Chargement des boutiques actives
+  //   useEffect(() => {
+  //     const loadShops = async () => {
+  //       try {
+  //         const shops = await db.getActiveShops(filterParams.city);
+  //         setActiveShops(shops || []);
+  //       } catch (error) {
+  //         console.error('Erreur chargement boutiques:', error);
+  //       }
+  //     };
+  //     loadShops();
+  //   }, [filterParams.city, dataVersion]);
+
+  //   // Chargement des villes (pour le filtre)
+  //   useEffect(() => {
+  //     const loadCityOptions = async () => {
+  //       try {
+  //         const shops = await db.getActiveShops();
+  //         const cities = (shops || [])
+  //           .filter((shop: any) => shop.is_active && shop.status === 'ACTIVE' && shop.city)
+  //           .map((shop: any) => shop.city as string);
+  //         const unique = Array.from(new Set(cities)).sort((a, b) => String(a).localeCompare(String(b)));
+  // setCityOptions(unique as string[]);
+  //       } catch (error) {
+  //         console.error('Erreur chargement villes:', error);
+  //       }
+  //     };
+  //     loadCityOptions();
+  //   }, [dataVersion]);
+
   useEffect(() => {
-    const abortController = new AbortController();
+  const abortController = new AbortController();
 
-    const currentFilters = {
-      city: filterParams.city,
-      q: filterParams.q,
-      category: filterParams.category,
-      subcategory: filterParams.subcategory,
-      price_min: filterParams.price_min,
-      price_max: filterParams.price_max,
-    };
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [categoriesData, catalogData, shopsData] = await Promise.all([
+        db.getCategories().catch(() => []),
+        db.getCatalogProducts(filterParams).catch(() => ({ products: [], total: 0, filterSummary: '' })),
+        db.getActiveShops(filterParams.city).catch(() => [])
+      ]);
 
-    const loadAllData = async () => {
-      setLoading(true);
-      try {
-        const [categoriesData, catalogDataRes, shopsData] = await Promise.all([
-          db.getCategories().catch(() => []),
-          db.getCatalogProducts(currentFilters).catch(() => ({ products: [], total: 0, filterSummary: '' })),
-          db.getActiveShops(currentFilters.city).catch(() => [])
-        ]);
+      if (!abortController.signal.aborted) {
+        setCategories(categoriesData || []);
+        setCatalogData(catalogData || { products: [], total: 0, filterSummary: '' });
+        setActiveShops(shopsData || []);
 
-        if (!abortController.signal.aborted) {
-          setCategories(categoriesData || []);
-          setCatalogData(catalogDataRes || { products: [], total: 0, filterSummary: '' });
-          setActiveShops(shopsData || []);
-
-          const cities = (shopsData || [])
-            .filter((shop: any) => shop.is_active && shop.status === 'ACTIVE' && shop.city)
-            .map((shop: any) => shop.city as string);
-          const unique = Array.from(new Set(cities)).sort((a, b) => String(a).localeCompare(String(b)));
-          setCityOptions(unique as string[]);
-        }
-      } catch (error) {
-        if (!abortController.signal.aborted) {
-          console.error('Erreur chargement données:', error);
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
+        const cities = (shopsData || [])
+          .filter((shop: any) => shop.is_active && shop.status === 'ACTIVE' && shop.city)
+          .map((shop: any) => shop.city as string);
+        const unique = Array.from(new Set(cities)).sort((a, b) => String(a).localeCompare(String(b)));
+        setCityOptions(unique as string[]);
       }
-    };
+    } catch (error) {
+      if (!abortController.signal.aborted) {
+        console.error('Erreur chargement données:', error);
+      }
+    } finally {
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  };
 
-    loadAllData();
-    return () => { abortController.abort(); };
-  }, [
-    filterParams.city,
-    filterParams.q,
-    filterParams.category,
-    filterParams.subcategory,
-    filterParams.price_min,
-    filterParams.price_max,
-    dataVersion
-  ]);
+  loadAllData();
+  return () => { abortController.abort(); };
+  // ✅ Dépendances primitives au lieu de l'objet filterParams
+}, [
+  filterParams.city,
+  filterParams.q,
+  filterParams.category,
+  filterParams.subcategory,
+  filterParams.price_min,
+  filterParams.price_max,
+  dataVersion
+]);
 
+  
   const hasFilters = filterParams.city || filterParams.q || filterParams.category || filterParams.price_min || filterParams.price_max;
 
   const applyPriceFilter = () => {
@@ -203,7 +256,8 @@ export function CatalogFeed() {
 
           <button
             onClick={() => setIsCategoryDrawerOpen(true)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${filterParams.category ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${filterParams.category ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+              }`}
           >
             <Grid3X3 className="w-3.5 h-3.5" />
             {filterParams.category ? filterParams.category.split(' ')[0] : 'Catégories'}
@@ -218,7 +272,8 @@ export function CatalogFeed() {
 
           <button
             onClick={() => setShowPriceFilter(!showPriceFilter)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${filterParams.price_min || filterParams.price_max ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${filterParams.price_min || filterParams.price_max ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+              }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" /> Prix
           </button>
@@ -234,43 +289,101 @@ export function CatalogFeed() {
         </div>
 
         {showPriceFilter && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-lg">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Fourchette de prix (FCFA)</p>
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 sm:hidden">Minimum</label>
-                <input type="number" placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} className="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/20 transition-all" min="0" />
-              </div>
-              <div className="flex items-center justify-center sm:px-1">
-                <span className="text-slate-400 font-medium text-sm">—</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 sm:hidden">Maximum</label>
-                <input type="number" placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/20 transition-all" min="0" />
-              </div>
-              <button onClick={applyPriceFilter} className="sm:flex-shrink-0 px-6 py-2.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={!priceMin && !priceMax}>
-                Appliquer
-              </button>
-            </div>
-            {(priceMin || priceMax) && (
-              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                {priceMin && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
-                    Min: {parseInt(priceMin).toLocaleString()} FCFA
-                    <button onClick={() => { setPriceMin(''); applyPriceFilter(); }} className="ml-1 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200">✕</button>
-                  </span>
-                )}
-                {priceMax && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
-                    Max: {parseInt(priceMax).toLocaleString()} FCFA
-                    <button onClick={() => { setPriceMax(''); applyPriceFilter(); }} className="ml-1 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200">✕</button>
-                  </span>
-                )}
-                <button onClick={() => { setPriceMin(''); setPriceMax(''); applyPriceFilter(); }} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Tout effacer</button>
-              </div>
-            )}
-          </div>
+  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-lg">
+    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+      Fourchette de prix (FCFA)
+    </p>
+    
+    {/* ✅ Layout responsive: colonne sur mobile, ligne sur desktop */}
+    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+      
+      {/* Input Min */}
+      <div className="flex-1 min-w-0">
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 sm:hidden">
+          Minimum
+        </label>
+        <input
+          type="number"
+          placeholder="Min"
+          value={priceMin}
+          onChange={e => setPriceMin(e.target.value)}
+          className="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+          min="0"
+        />
+      </div>
+
+      {/* Séparateur */}
+      <div className="flex items-center justify-center sm:px-1">
+        <span className="text-slate-400 font-medium text-sm">—</span>
+      </div>
+
+      {/* Input Max */}
+      <div className="flex-1 min-w-0">
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1 sm:hidden">
+          Maximum
+        </label>
+        <input
+          type="number"
+          placeholder="Max"
+          value={priceMax}
+          onChange={e => setPriceMax(e.target.value)}
+          className="w-full px-3 py-2.5 sm:py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+          min="0"
+        />
+      </div>
+
+      {/* Bouton OK */}
+      <button 
+        onClick={applyPriceFilter} 
+        className="sm:flex-shrink-0 px-6 py-2.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={!priceMin && !priceMax}
+      >
+        Appliquer
+      </button>
+    </div>
+
+    {/* ✅ Prix actifs (tags) */}
+    {(priceMin || priceMax) && (
+      <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+        {priceMin && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+            Min: {parseInt(priceMin).toLocaleString()} FCFA
+            <button 
+              onClick={() => { setPriceMin(''); applyPriceFilter(); }}
+              className="ml-1 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200"
+            >
+              ✕
+            </button>
+          </span>
         )}
+        {priceMax && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
+            Max: {parseInt(priceMax).toLocaleString()} FCFA
+            <button 
+              onClick={() => { setPriceMax(''); applyPriceFilter(); }}
+              className="ml-1 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-200"
+            >
+              ✕
+            </button>
+          </span>
+        )}
+        <button 
+          onClick={() => { setPriceMin(''); setPriceMax(''); applyPriceFilter(); }}
+          className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+        >
+          Tout effacer
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
+        {/* {catalogData.filterSummary && (
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <Search className="w-4 h-4" />
+            <span>{catalogData.total} résultat{catalogData.total !== 1 ? 's' : ''} pour <strong>{catalogData.filterSummary}</strong></span>
+          </div>
+        )} */}
       </div>
 
       {/* Grid header */}

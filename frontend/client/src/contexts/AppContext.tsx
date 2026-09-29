@@ -78,6 +78,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [location, setLocation] = useLocation();
 
+  // L'URL est la source de vérité pour les ouvertures directes/rechargements.
+  // Les handlers ci-dessus mettent eux-mêmes à jour l'URL, donc aucune
+  // seconde boucle URL <-> viewMode n'est nécessaire dans App.tsx.
+  useEffect(() => {
+    const path = location.split('?')[0];
+
+    if (path === '/' || path === '') {
+      if (viewMode !== 'catalog' || selectedShopSlug !== null || selectedProductSlug !== null) {
+        setSelectedShopSlug(null);
+        setSelectedProductSlug(null);
+        setViewMode('catalog');
+      }
+      return;
+    }
+
+    if (path.startsWith('/product/')) {
+      const slug = path.slice('/product/'.length);
+      if (slug && (viewMode !== 'product_detail' || selectedProductSlug !== slug)) {
+        setSelectedShopSlug(null);
+        setSelectedProductSlug(slug);
+        setViewMode('product_detail');
+      }
+      return;
+    }
+
+    if (path.startsWith('/shop/')) {
+      const slug = path.slice('/shop/'.length);
+      if (slug && (viewMode !== 'shop_vitrine' || selectedShopSlug !== slug)) {
+        setSelectedProductSlug(null);
+        setSelectedShopSlug(slug);
+        setViewMode('shop_vitrine');
+      }
+      return;
+    }
+
+    if (path === '/dashboard') {
+      if (viewMode !== 'dashboard') setViewMode('dashboard');
+      return;
+    }
+
+    if (path === '/moderation') {
+      if (viewMode !== 'moderation') setViewMode('moderation');
+      return;
+    }
+  }, [location, viewMode, selectedShopSlug, selectedProductSlug]);
+
   useEffect(() => {
     const handleUnauthorized = () => {
       setCurrentUser(null);
@@ -134,15 +180,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [themeMode]);
 
-  const handleOpenAuthModal = (reason?: string, role?: UserRole) =>
+  const handleOpenAuthModal = useCallback((reason?: string, role?: UserRole) => {
     setAuthModalState({ isOpen: true, actionReason: reason, initialRole: role || 'CUSTOMER' });
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     db.logout();
     setCurrentUser(null);
+    setSelectedShopSlug(null);
+    setSelectedProductSlug(null);
     setViewMode('catalog');
+    setLocation('/');
     bumpData();
-  };
+  }, [setLocation, bumpData]);
 
   const handleChangeRole = async (role: UserRole) => {
     db.setCurrentUserRole(role);
@@ -153,11 +203,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     bumpData();
   };
 
-  const handleResetData = () => {
+  const handleResetData = useCallback(() => {
     db.resetToDefaults();
     setCurrentUser(null);
+    setSelectedShopSlug(null);
+    setSelectedProductSlug(null);
+    setViewMode('catalog');
+    setLocation('/');
     bumpData();
-  };
+  }, [setLocation, bumpData]);
 
   const handleFilterChange = (newParams: Partial<CatalogFilterParams>) =>
     setFilterParams(prev => ({ ...prev, ...newParams }));
@@ -165,38 +219,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const handleClearFilters = () =>
     setFilterParams({ city: '', q: '', category: '', subcategory: '', price_min: null, price_max: null });
 
-  const handleNavigateHome = () => {
-    setViewMode('catalog');
+  const handleNavigateHome = useCallback(() => {
     setSelectedShopSlug(null);
     setSelectedProductSlug(null);
-  };
+    setViewMode('catalog');
+    setLocation('/');
+  }, [setLocation]);
 
-  const handleSelectShopVitrine = (slug: string) => {
+  const handleSelectShopVitrine = useCallback((slug: string) => {
     setSelectedShopSlug(slug);
+    setSelectedProductSlug(null);
     setViewMode('shop_vitrine');
-  };
+    setLocation(`/shop/${slug}`);
+  }, [setLocation]);
 
-  const handleSelectProductDetail = (slug: string) => {
+  const handleSelectProductDetail = useCallback((slug: string) => {
     setSelectedProductSlug(slug);
+    setSelectedShopSlug(null);
     setViewMode('product_detail');
-  };
+    setLocation(`/product/${slug}`);
+  }, [setLocation]);
 
-  const handleNavigateDashboard = () => {
+  const handleNavigateDashboard = useCallback(() => {
     if (!currentUser) {
       handleOpenAuthModal('Connectez-vous pour accéder à votre espace.');
       return;
     }
     setViewMode('dashboard');
-  };
+    setLocation('/dashboard');
+  }, [currentUser, handleOpenAuthModal, setLocation]);
 
-  const handleNavigateModeration = () => {
+  const handleNavigateModeration = useCallback(() => {
     if (!currentUser) {
       handleOpenAuthModal('Connectez-vous en tant qu\'admin pour accéder à la console.', 'ADMIN');
       return;
     }
     if (currentUser.role !== 'ADMIN' && !currentUser.is_staff) return;
     setViewMode('moderation');
-  };
+    setLocation('/moderation');
+  }, [currentUser, handleOpenAuthModal, setLocation]);
 
   const handleQuickWhatsApp = (product: Product) => setWhatsAppModalData({ isOpen: true, product });
 
@@ -232,7 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // window.history.pushState(null, '', path);
     // Déclencher un événement pour que les composants réagissent
     // window.dispatchEvent(new PopStateEvent('popstate'));
-  }, []);
+  }, [setLocation]);
 
   const handleSaveProduct = async (data: Partial<Product> & { shop_id: string }) => {
     try {
@@ -264,7 +325,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const user = await db.getCurrentUser();
     if (user) {
       setCurrentUser(user);
+      setSelectedShopSlug(null);
+      setSelectedProductSlug(null);
       setViewMode('moderation');
+      setLocation('/moderation');
       bumpData();
     }
   };
