@@ -6,44 +6,43 @@ import { formatPrice } from '../lib/format';
 
 export function SellerAnalytics() {
   const { currentUser, setViewMode, dataVersion } = useApp();
-  const [analytics, setAnalytics] = useState<any>({ 
-    totalViews: 0, 
-    totalWhatsApp: 0, 
-    totalRevenue: 0, 
-    products: [] 
+  const [analytics, setAnalytics] = useState<any>({
+    totalViews: 0,
+    totalWhatsApp: 0,
+    totalRevenue: 0,
+    products: []
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const loadAnalytics = async () => {
-      if (!currentUser) {
-        setLoading(false);
+      if (!currentUser?.id) {
+        if (!cancelled) setLoading(false);
         return;
       }
-      
-      setLoading(true);
+      if (!cancelled) setLoading(true);
       try {
         const shop = await db.getShopByOwner(currentUser.id);
+        if (cancelled) return;
         if (shop) {
           const data = await db.getShopAnalytics(shop.id);
-          // ✅ S'assurer que products est toujours un tableau
-          setAnalytics({
-            ...data,
-            products: Array.isArray(data?.products) ? data.products : []
-          });
+          if (!cancelled) {
+            setAnalytics({ ...data, products: Array.isArray(data?.products) ? data.products : [] });
+          }
         } else {
-          setAnalytics({ totalViews: 0, totalWhatsApp: 0, totalRevenue: 0, products: [] });
+          if (!cancelled) setAnalytics({ totalViews: 0, totalWhatsApp: 0, totalRevenue: 0, products: [] });
         }
       } catch (error) {
         console.error('Erreur chargement analytics:', error);
-        setAnalytics({ totalViews: 0, totalWhatsApp: 0, totalRevenue: 0, products: [] });
+        if (!cancelled) setAnalytics({ totalViews: 0, totalWhatsApp: 0, totalRevenue: 0, products: [] });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    
     loadAnalytics();
-  }, [currentUser, dataVersion]);
+    return () => { cancelled = true; };
+  }, [currentUser?.id, dataVersion]);
 
   if (loading) {
     return (
@@ -57,12 +56,8 @@ export function SellerAnalytics() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <button 
-          onClick={() => setViewMode('dashboard')} 
-          className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        >
+        <button onClick={() => setViewMode('dashboard')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
         <div>
@@ -71,7 +66,6 @@ export function SellerAnalytics() {
         </div>
       </div>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Vues totales', value: totalViews || 0, icon: Eye, color: 'text-sky-600', bg: 'bg-sky-50 dark:bg-sky-900/20' },
@@ -86,14 +80,12 @@ export function SellerAnalytics() {
         ))}
       </div>
 
-      {/* Products performance */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Package className="w-5 h-5 text-indigo-600" />
           <h2 className="font-bold text-slate-900 dark:text-white">Performance des produits</h2>
           <span className="ml-auto text-xs text-slate-400">{products.length} produits</span>
         </div>
-        
         {products.length === 0 ? (
           <p className="text-center text-slate-400 text-sm py-8">Aucun produit dans votre boutique</p>
         ) : (

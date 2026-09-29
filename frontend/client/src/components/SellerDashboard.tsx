@@ -1,5 +1,5 @@
 // Source 4 (Correction dans SellerDashboard.tsx)
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, ToggleLeft, ToggleRight, BarChart2, Store, Package, AlertTriangle, CheckCircle, Clock, ExternalLink, AlertCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
@@ -16,19 +16,19 @@ export function SellerDashboard() {
   const [shop, setShop] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
-
   const [showHoursEditor, setShowHoursEditor] = useState(false);
 
-  // Chargement des données
   useEffect(() => {
+    let cancelled = false;
     const loadData = async () => {
-      if (!currentUser) {
-        setLoading(false);
+      if (!currentUser?.id) {
+        if (!cancelled) setLoading(false);
         return;
       }
-      setLoading(true);
+      if (!cancelled) setLoading(true);
       try {
         const shopData = await db.getShopByOwner(currentUser.id);
+        if (cancelled) return;
         setShop(shopData);
 
         if (shopData) {
@@ -36,22 +36,26 @@ export function SellerDashboard() {
             db.getProductsForShop(shopData.id),
             db.getShopAnalytics(shopData.id),
           ]);
-          setProducts(productsData || []);
-          setAnalytics(analyticsData);
+          if (!cancelled) {
+            setProducts(productsData || []);
+            setAnalytics(analyticsData);
+          }
         } else {
-          setProducts([]);
-          setAnalytics(null);
+          if (!cancelled) {
+            setProducts([]);
+            setAnalytics(null);
+          }
         }
       } catch (error) {
         console.error('Erreur chargement données vendeur:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     loadData();
-  }, [currentUser, dataVersion]);
+    return () => { cancelled = true; };
+  }, [currentUser?.id, dataVersion]);
 
-  // ✅ Définir statusConfig avec typage correct
   const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
     ACTIVE: { label: 'Active', color: 'bg-green-100 text-green-700', icon: CheckCircle },
     PENDING: { label: 'En attente', color: 'bg-amber-100 text-amber-700', icon: Clock },
@@ -59,7 +63,6 @@ export function SellerDashboard() {
     REJECTED: { label: 'Rejetée', color: 'bg-red-100 text-red-700', icon: AlertTriangle },
   };
 
-  // ✅ Fonction sécurisée pour obtenir la configuration
   const getStatusConfig = (status: string) => {
     return statusConfig[status] || {
       label: status || 'Inconnu',
@@ -68,49 +71,26 @@ export function SellerDashboard() {
     };
   };
 
-  // Handler de suppression sécurisé
   const handleDeleteProduct = async (productId: string) => {
     try {
       await db.deleteProduct(productId);
     } catch (error) {
-      console.warn(`Impossible de supprimer le produit ${productId} (déjà supprimé ou introuvable).`, error);
+      console.warn(`Impossible de supprimer le produit ${productId}.`, error);
     } finally {
       setDeleteConfirm(null);
       bumpData();
     }
   };
 
-  // const handleToggleStock = async (product: any) => {
-  //   try {
-  //     await db.saveProduct({ ...product, in_stock: !product.in_stock });
-  //     bumpData();
-  //   } catch (error) {
-  //     console.error('Erreur mise à jour du stock:', error);
-  //   }
-  // };
-
   const handleToggleStock = async (product: any) => {
-  if (!product || !product.id) {
-    console.error('❌ Produit invalide pour toggle stock');
-    return;
-  }
-  
-  try {
-    // ✅ S'assurer que l'ID est bien conservé
-    const updatedProduct = {
-      ...product,
-      in_stock: !product.in_stock,
-      id: product.id // ← S'assurer que l'ID est présent
-    };
-    
-    console.log('🔄 Toggle stock produit ID:', product.id, 'Nouveau statut:', updatedProduct.in_stock);
-    
-    await db.saveProduct(updatedProduct);
-    bumpData();
-  } catch (error) {
-    console.error('❌ Erreur mise à jour du stock:', error);
-  }
-};
+    if (!product || !product.id) return;
+    try {
+      await db.saveProduct({ ...product, in_stock: !product.in_stock, id: product.id });
+      bumpData();
+    } catch (error) {
+      console.error('Erreur mise à jour du stock:', error);
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -124,8 +104,6 @@ export function SellerDashboard() {
 
   return (
     <div className="space-y-4">
-
-      {/* Header */}
       <div className="bg-gradient-to-br from-indigo-900 via-indigo-700 to-indigo-600 rounded-2xl p-6 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <img src="/storage/app/visuel.webp" alt="" className="w-full h-full object-cover" />
@@ -148,16 +126,16 @@ export function SellerDashboard() {
         </div>
       ) : (
         <>
-          {/* Shop status card */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex items-center gap-3">
                 <SafeImage
-  src={getImageUrl(shop.logo)}
-  alt={shop.name}
-  className="w-14 h-14 rounded-xl object-cover"
-  fallbackIcon={<Store className="w-7 h-7 text-indigo-600" />}
-/>
+                  src={getImageUrl(shop.logo)}
+                  alt={shop.name}
+                  square
+                  className="w-14 h-14 rounded-xl shrink-0"
+                  fallbackIcon={<Store className="w-7 h-7 text-indigo-600" />}
+                />
                 <div>
                   <h2 className="font-bold text-slate-900 dark:text-white">{shop.name}</h2>
                   <p className="text-sm text-slate-500">{shop.city}</p>
@@ -181,7 +159,6 @@ export function SellerDashboard() {
               </div>
             )}
 
-            {/* Stats */}
             {analytics && (
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {[
@@ -198,7 +175,6 @@ export function SellerDashboard() {
               </div>
             )}
 
-            {/* Quick actions */}
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setShopModalData({ isOpen: true, shop })} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors">
                 <Edit2 className="w-3.5 h-3.5" /> Modifier
@@ -208,7 +184,6 @@ export function SellerDashboard() {
                   <ExternalLink className="w-3.5 h-3.5" /> Voir la vitrine
                 </button>
               )}
-
               <button onClick={() => setShowHoursEditor(true)} className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-semibold rounded-xl hover:bg-amber-100 transition-colors">
                 <Clock className="w-3.5 h-3.5" /> Horaires
               </button>
@@ -216,10 +191,7 @@ export function SellerDashboard() {
                 <ShopHoursEditor
                   shop={shop}
                   onClose={() => setShowHoursEditor(false)}
-                  onSave={() => {
-                    bumpData();
-                    setShowHoursEditor(false);
-                  }}
+                  onSave={() => { bumpData(); setShowHoursEditor(false); }}
                 />
               )}
               <button onClick={() => setViewMode('analytics')} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
@@ -228,7 +200,6 @@ export function SellerDashboard() {
             </div>
           </div>
 
-          {/* Products management */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
               <h2 className="font-bold text-slate-900 dark:text-white">Mes produits ({products.length})</h2>
@@ -246,17 +217,18 @@ export function SellerDashboard() {
                 {products.map(p => (
                   <div key={p.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <SafeImage
-  src={getImageUrl(p.image)}
-  alt={p.name}
-  className="w-12 h-12 rounded-xl object-cover shrink-0"
-  fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
-/>
+                      src={getImageUrl(p.image)}
+                      alt={p.name}
+                      square
+                      className="w-12 h-12 rounded-xl shrink-0"
+                      fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</p>
                       <p className="text-sm font-bold text-indigo-600">{formatPrice(p.price)}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button disabled
+                      <button
                         onClick={() => handleToggleStock(p)}
                         className={`p-1.5 rounded-lg transition-colors ${p.in_stock ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}
                         title={p.in_stock ? 'Marquer épuisé' : 'Marquer en stock'}

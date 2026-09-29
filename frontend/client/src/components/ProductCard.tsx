@@ -10,7 +10,7 @@ import { getImageUrl } from '@/lib/imageUrl';
 
 interface ProductCardProps {
   product: Product;
-  onSelect?: (slug: string) => void;  // ← Optionnel
+  onSelect?: (slug: string) => void;
   onClick?: (slug: string) => void;
   onWhatsApp: (product: Product) => void;
 }
@@ -20,32 +20,31 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
   const [isFav, setIsFav] = useState(false);
   const [loadingFav, setLoadingFav] = useState(false);
 
-  // ✅ Charger l'état initial du favori
   useEffect(() => {
+    let cancelled = false;
     const checkFavorite = async () => {
-      if (!currentUser) {
+      if (!currentUser?.id) {
         setIsFav(false);
         return;
       }
       try {
         const result = await db.isFavorite(currentUser.id, product.id);
-        setIsFav(result);
+        if (!cancelled) setIsFav(result);
       } catch (error) {
         console.error('Erreur vérification favori:', error);
-        setIsFav(false);
+        if (!cancelled) setIsFav(false);
       }
     };
     checkFavorite();
-  }, [currentUser, product.id]);
+    return () => { cancelled = true; };
+  }, [currentUser?.id, product.id]);
 
   const handleFav = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!currentUser) return;
-    if (loadingFav) return;
+    if (!currentUser || loadingFav) return;
 
     setLoadingFav(true);
     try {
-      // ✅ Utiliser await pour obtenir le résultat
       const next = await db.toggleFavorite(currentUser.id, product.id);
       setIsFav(next);
       bumpData();
@@ -57,11 +56,8 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
   };
 
   const handleClick = () => {
-    if (onSelect) {
-      onSelect(product.slug);
-    } else if (onClick) {
-      onClick(product.slug);
-    }
+    if (onSelect) onSelect(product.slug);
+    else if (onClick) onClick(product.slug);
   };
 
   const handleWhatsApp = (e: React.MouseEvent) => {
@@ -76,34 +72,29 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
       onClick={handleClick}
       className="group bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
     >
-      {/* Image */}
-      <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-700 overflow-hidden">
+      <div className="relative aspect-square bg-slate-100 dark:bg-slate-700 overflow-hidden">
         <SafeImage
-  src={getImageUrl(product.image)}
-  alt={product.name}
-  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-  fallbackIcon={<ShoppingBag className="w-12 h-12 text-slate-300" />}
-/>
-        {/* Overlay actions */}
+          src={getImageUrl(product.image)}
+          alt={product.name}
+          className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+          fallbackIcon={<ShoppingBag className="w-12 h-12 text-slate-300" />}
+        />
         <div className="absolute top-2 right-2 flex gap-1.5">
           {currentUser && (
             <button
               onClick={handleFav}
               disabled={loadingFav}
-              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-500 hover:bg-white hover:text-red-500'
-                } ${loadingFav ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-500 hover:bg-white hover:text-red-500'} ${loadingFav ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
             </button>
           )}
         </div>
-        {/* Stock badge */}
         {!product.in_stock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-white text-slate-800 text-xs font-bold px-3 py-1 rounded-full">Rupture de stock</span>
           </div>
         )}
-        {/* Category pill */}
         <div className="absolute bottom-2 left-2">
           <span className="bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
             {product.subcategory_name || product.category}
@@ -111,12 +102,10 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-3">
         <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium truncate mb-0.5">{product.shop_name}</p>
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2 leading-snug mb-2">{product.name}</h3>
 
-        {/* Stats */}
         <div className="flex items-center gap-2 mb-2">
           {avgRating && (
             <span className="flex items-center gap-0.5 text-[10px] text-amber-500 font-medium">
@@ -130,7 +119,6 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
           )}
         </div>
 
-        {/* Price + WhatsApp */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-base font-bold text-slate-900 dark:text-white">{formatPrice(product.price)}</span>
           <button
