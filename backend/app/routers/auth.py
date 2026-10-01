@@ -10,6 +10,7 @@ from app.config import settings
 import json
 import uuid
 import hashlib
+from app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

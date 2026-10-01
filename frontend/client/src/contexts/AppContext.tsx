@@ -52,6 +52,8 @@ interface AppContextValue {
   handleAuthenticateStaff: (user: CustomUser) => void;
   setViewMode: (v: ViewMode) => void;
   refreshUser: () => Promise<void>;
+  favoriteIds: Set<string>;
+  toggleFavorite: (productId: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -138,22 +140,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Chargement initial de l'utilisateur
   useEffect(() => {
-  const loadUser = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) return;  // Pas de token, pas la peine d'appeler
+    const loadUser = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;  // Pas de token, pas la peine d'appeler
 
-    // Essayer 2 fois (avec 1s de délai) avant d'abandonner
-    for (let i = 0; i < 2; i++) {
-      const user = await db.refreshCurrentUser();
-      if (user) {
-        setCurrentUser(user);
-        return;
+      // Essayer 2 fois (avec 1s de délai) avant d'abandonner
+      for (let i = 0; i < 2; i++) {
+        const user = await db.refreshCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          return;
+        }
+        await new Promise(r => setTimeout(r, 1000));
       }
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  };
-  loadUser();
-}, []);
+    };
+    loadUser();
+  }, []);
 
   // Rafraîchissement de l'utilisateur
   const refreshUser = useCallback(async () => {
@@ -333,6 +335,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+// ✅ Charger les favoris une seule fois
+useEffect(() => {
+  const loadFavorites = async () => {
+    if (!currentUser?.id) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    try {
+      const result = await db.getUserFavorites(currentUser.id);
+      setFavoriteIds(new Set(result.product_ids || []));
+    } catch (error) {
+      console.error('Erreur chargement favoris:', error);
+      setFavoriteIds(new Set());
+    }
+  };
+  loadFavorites();
+}, [currentUser?.id, dataVersion]);
+
+// ✅ Fonction toggle
+const toggleFavorite = useCallback(async (productId: string) => {
+  if (!currentUser) return false;
+  
+  const wasFav = favoriteIds.has(productId);
+  const newSet = new Set(favoriteIds);
+  if (wasFav) newSet.delete(productId);
+  else newSet.add(productId);
+  setFavoriteIds(newSet);  // Optimistic update
+  
+  try {
+    await db.toggleFavorite(currentUser.id, productId);
+    return !wasFav;
+  } catch (error) {
+    setFavoriteIds(favoriteIds);  // Rollback
+    console.error('Erreur toggle favori:', error);
+    return wasFav;
+  }
+}, [currentUser, favoriteIds]);
+
   return (
     <AppContext.Provider value={{
       navigateTo, currentUser, setCurrentUser, themeMode, setThemeMode,
@@ -352,7 +394,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       handleLogout, handleChangeRole, handleResetData,
       handleFilterChange, handleClearFilters,
       handleQuickWhatsApp, handleSaveShop, handleSaveProduct, handleAuthenticateStaff,
-      refreshUser,
+      refreshUser, toggleFavorite, favoriteIds,
     }}>
       {children}
     </AppContext.Provider>

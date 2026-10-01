@@ -1,10 +1,9 @@
-// Design: Afrique Moderne — carte produit avec image 4:3, prix bold, bouton WhatsApp toujours visible
-import React, { useState, useEffect } from 'react';
+// Design: Afrique Moderne — carte produit avec image carrée, favoris via contexte global
+import React, { useState } from 'react';
 import { Heart, MessageCircle, Eye, Star, ShoppingBag } from 'lucide-react';
 import { Product } from '../types';
 import { formatPrice } from '../lib/format';
 import { useApp } from '../contexts/AppContext';
-import { db } from '../services/db';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
@@ -16,28 +15,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductCardProps) {
-  const { currentUser, bumpData } = useApp();
-  const [isFav, setIsFav] = useState(false);
+  const { currentUser, favoriteIds, toggleFavorite } = useApp();
   const [loadingFav, setLoadingFav] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const checkFavorite = async () => {
-      if (!currentUser?.id) {
-        setIsFav(false);
-        return;
-      }
-      try {
-        const result = await db.isFavorite(currentUser.id, product.id);
-        if (!cancelled) setIsFav(result);
-      } catch (error) {
-        console.error('Erreur vérification favori:', error);
-        if (!cancelled) setIsFav(false);
-      }
-    };
-    checkFavorite();
-    return () => { cancelled = true; };
-  }, [currentUser?.id, product.id]);
+  // ✅ Lecture directe depuis le Set global — AUCUN appel API
+  const isFav = favoriteIds.has(product.id);
 
   const handleFav = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,9 +27,7 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
 
     setLoadingFav(true);
     try {
-      const next = await db.toggleFavorite(currentUser.id, product.id);
-      setIsFav(next);
-      bumpData();
+      await toggleFavorite(product.id);
     } catch (error) {
       console.error('Erreur toggle favori:', error);
     } finally {
@@ -84,7 +64,9 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
             <button
               onClick={handleFav}
               disabled={loadingFav}
-              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-500 hover:bg-white hover:text-red-500'} ${loadingFav ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${
+                isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-500 hover:bg-white hover:text-red-500'
+              } ${loadingFav ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
             </button>

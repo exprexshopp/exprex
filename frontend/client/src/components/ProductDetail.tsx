@@ -1,8 +1,8 @@
-// Design: Afrique Moderne — fiche produit détaillée avec avis et CTA WhatsApp prominent
+// Design: Afrique Moderne — fiche produit détaillée avec avis et CTA WhatsApp
 import React, { useEffect, useState } from 'react';
-import { 
-  ArrowLeft, Heart, Share2, Star, Eye, MessageCircle, 
-  Store, MapPin, ShoppingBag, Clock, CheckCircle, XCircle 
+import {
+  ArrowLeft, Heart, Share2, Star, Eye, MessageCircle,
+  Store, MapPin, ShoppingBag, Clock, CheckCircle, XCircle
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
@@ -12,103 +12,82 @@ import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
 export function ProductDetail() {
-  const { 
-    currentUser, selectedProductSlug, handleNavigateHome, 
-    handleSelectShopVitrine, handleQuickWhatsApp, 
-    handleOpenAuthModal
+  const {
+    currentUser, selectedProductSlug, handleNavigateHome,
+    handleSelectShopVitrine, handleQuickWhatsApp,
+    handleOpenAuthModal, favoriteIds, toggleFavorite
   } = useApp();
-  
+
   const [product, setProduct] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [shop, setShop] = useState<any>(null);
-  const [isFav, setIsFav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
-  // ✅ Charger les données du produit
+  // ✅ Lecture directe depuis le Set global
+  const isFav = product ? favoriteIds.has(product.id) : false;
+
   // ✅ Charger les données du produit (UNE SEULE FOIS par slug)
-useEffect(() => {
-  if (!selectedProductSlug) {
-    setLoading(false);
-    return;
-  }
+  useEffect(() => {
+    if (!selectedProductSlug) {
+      setLoading(false);
+      return;
+    }
 
-  let cancelled = false;
-  const loadProductData = async () => {
-    setLoading(true);
-    try {
-      const productData = await db.getProductBySlug(selectedProductSlug);
-      if (cancelled) return;
-      setProduct(productData);
-
-      if (productData) {
-        const reviewsData = await db.getProductReviews(productData.id);
+    let cancelled = false;
+    const loadProductData = async () => {
+      setLoading(true);
+      try {
+        const productData = await db.getProductBySlug(selectedProductSlug);
         if (cancelled) return;
-        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+        setProduct(productData);
 
-        const shopData = await db.getShopBySlug(productData.shop_slug);
-        if (cancelled) return;
-        setShop(shopData);
+        if (productData) {
+          const reviewsData = await db.getProductReviews(productData.id);
+          if (cancelled) return;
+          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
 
-        if (shopData && shopData.hours) {
-          try {
-            const hoursData = typeof shopData.hours === 'string'
-              ? JSON.parse(shopData.hours)
-              : shopData.hours;
-            if (!cancelled) setIsShopOpen(isShopOpenNow(hoursData));
-          } catch {
-            if (!cancelled) setIsShopOpen(false);
+          const shopData = await db.getShopBySlug(productData.shop_slug);
+          if (cancelled) return;
+          setShop(shopData);
+
+          if (shopData && shopData.hours) {
+            try {
+              const hoursData = typeof shopData.hours === 'string'
+                ? JSON.parse(shopData.hours)
+                : shopData.hours;
+              if (!cancelled) setIsShopOpen(isShopOpenNow(hoursData));
+            } catch {
+              if (!cancelled) setIsShopOpen(false);
+            }
+          } else {
+            setIsShopOpen(false);
           }
-        } else {
-          setIsShopOpen(false);
+
+          // Analytics : enregistrer la vue sans modifier l'état global React
+          void db.recordView(productData.id).catch((error) => {
+            console.warn("Impossible d'enregistrer la vue du produit:", error);
+          });
         }
-
-        // Analytics : enregistrer la vue sans modifier l'état global React.
-        void db.recordView(productData.id).catch((error) => {
-          console.warn("Impossible d'enregistrer la vue du produit:", error);
-        });
-
-        if (currentUser) {
-          const favStatus = await db.isFavorite(currentUser.id, productData.id);
-          if (!cancelled) setIsFav(favStatus);
+      } catch (error) {
+        console.error('Erreur chargement produit:', error);
+        if (!cancelled) {
+          setProduct(null);
+          setReviews([]);
+          setShop(null);
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error('Erreur chargement produit:', error);
-      if (!cancelled) {
-        setProduct(null);
-        setReviews([]);
-        setShop(null);
-      }
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
+    };
 
-  loadProductData();
-  return () => { cancelled = true; };
-}, [selectedProductSlug]);  // ✅ RETIRÉ dataVersion
-
-  // ✅ Recharger les favoris quand l'utilisateur change
-useEffect(() => {
-  if (!product?.id || !currentUser) return;
-  
-  let cancelled = false;
-  const checkFav = async () => {
-    try {
-      const favStatus = await db.isFavorite(currentUser.id, product.id);
-      if (!cancelled) setIsFav(favStatus);
-    } catch (error) {
-      console.error('Erreur vérif favori:', error);
-    }
-  };
-  checkFav();
-  
-  return () => { cancelled = true; };
-}, [currentUser?.id, product?.id]);  // ✅ IDs (primitifs) au lieu d'objets
+    loadProductData();
+    return () => { cancelled = true; };
+  }, [selectedProductSlug]);
 
   if (loading) {
     return (
@@ -129,36 +108,41 @@ useEffect(() => {
     );
   }
 
-  const avgRating = reviews.length > 0 
-    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length 
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
     : null;
 
   const handleFav = async () => {
-    if (!currentUser) { 
-      handleOpenAuthModal('Connectez-vous pour ajouter aux favoris'); 
-      return; 
+    if (!currentUser) {
+      handleOpenAuthModal('Connectez-vous pour ajouter aux favoris');
+      return;
     }
-    const next = await db.toggleFavorite(currentUser.id, product.id);
-    setIsFav(next);
+    if (favLoading) return;
+    setFavLoading(true);
+    try {
+      await toggleFavorite(product.id);
+    } finally {
+      setFavLoading(false);
+    }
   };
 
   const handleSubmitReview = async () => {
-    if (!currentUser) { 
-      handleOpenAuthModal('Connectez-vous pour laisser un avis'); 
-      return; 
+    if (!currentUser) {
+      handleOpenAuthModal('Connectez-vous pour laisser un avis');
+      return;
     }
     if (!reviewText.trim()) return;
-    
+
     try {
-      await db.saveReview({ 
-        user_id: currentUser.id, 
-        user_name: `${currentUser.first_name} ${currentUser.last_name}`, 
-        product_id: product.id, 
-        rating: reviewRating, 
-        comment: reviewText 
+      await db.saveReview({
+        user_id: currentUser.id,
+        user_name: `${currentUser.first_name} ${currentUser.last_name}`,
+        product_id: product.id,
+        rating: reviewRating,
+        comment: reviewText
       });
       setReviewText('');
-      
+
       const reviewsData = await db.getProductReviews(product.id);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
     } catch (error) {
@@ -171,53 +155,43 @@ useEffect(() => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Back button */}
-      <button 
-        onClick={handleNavigateHome} 
+      <button
+        onClick={handleNavigateHome}
         className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors mb-4 group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         <span className="text-sm font-medium">Retour au catalogue</span>
       </button>
 
-      {/* ✅ Layout responsive: colonne sur mobile, 2 colonnes sur desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        
-        {/* LEFT COLUMN - Image Gallery */}
         <div className="lg:sticky lg:top-4 self-start">
-          <ImageGallery 
+          <ImageGallery
             images={productImages}
             mainImage={product.image || ''}
             productName={product.name}
           />
         </div>
 
-        {/* RIGHT COLUMN - Product Info */}
         <div className="space-y-4">
-          {/* Category & Stock */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
               {product.category} {product.subcategory_name && `· ${product.subcategory_name}`}
             </span>
             <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-              product.in_stock 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-red-100 text-red-700'
+              product.in_stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
             }`}>
               {product.in_stock ? '✅ En stock' : '❌ Épuisé'}
             </span>
           </div>
 
-          {/* Title */}
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white leading-tight">
             {product.name}
           </h1>
 
-          {/* Rating & Views */}
           <div className="flex items-center gap-4 text-sm">
             {avgRating && (
               <span className="flex items-center gap-1 text-amber-500 font-semibold">
-                <Star className="w-4 h-4 fill-current" /> 
+                <Star className="w-4 h-4 fill-current" />
                 {avgRating.toFixed(1)} ({reviews.length} avis)
               </span>
             )}
@@ -226,23 +200,21 @@ useEffect(() => {
             </span>
           </div>
 
-          {/* Price */}
           <div className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
             {formatPrice(product.price)}
           </div>
 
-          {/* Shop Info */}
           {shop && (
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
                 <SafeImage
-  src={getImageUrl(shop.logo)}
-  alt={shop.name}
-  className="w-12 h-12 rounded-xl object-cover"
-  fallbackIcon={<Store className="w-6 h-6 text-indigo-600" />}
-/>
+                  src={getImageUrl(shop.logo)}
+                  alt={shop.name}
+                  className="w-12 h-12 rounded-xl object-cover"
+                  fallbackIcon={<Store className="w-6 h-6 text-indigo-600" />}
+                />
                 <div className="flex-1 min-w-0">
-                  <button 
+                  <button
                     onClick={() => handleSelectShopVitrine(shop.slug)}
                     className="font-semibold text-slate-900 dark:text-white hover:text-indigo-600 transition-colors text-left"
                   >
@@ -267,14 +239,12 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Description */}
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
               {product.description}
             </p>
           </div>
 
-          {/* WhatsApp CTA */}
           <button
             onClick={() => handleQuickWhatsApp(product)}
             disabled={!product.in_stock}
@@ -284,15 +254,15 @@ useEffect(() => {
             Commander sur WhatsApp
           </button>
 
-          {/* Favorite & Share */}
           <div className="flex gap-3">
             <button
               onClick={handleFav}
+              disabled={favLoading}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all ${
-                isFav 
-                  ? 'bg-red-500 text-white hover:bg-red-600' 
+                isFav
+                  ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
+              } ${favLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Heart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
               {isFav ? 'Favori' : 'Ajouter aux favoris'}
@@ -307,14 +277,13 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Reviews Section - Full width */}
+      {/* Reviews Section */}
       <div className="mt-8 bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <Star className="w-5 h-5 text-amber-500 fill-current" />
           Avis clients ({reviews.length})
         </h2>
 
-        {/* Add review */}
         <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-4">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Laisser un avis</p>
           <div className="flex gap-1 mb-3">
@@ -331,16 +300,15 @@ useEffect(() => {
             rows={3}
             className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 focus:outline-none focus:border-indigo-300 resize-none mb-2"
           />
-          <button 
-            onClick={handleSubmitReview} 
-            disabled={!reviewText.trim()} 
+          <button
+            onClick={handleSubmitReview}
+            disabled={!reviewText.trim()}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold rounded-xl transition-colors active:scale-95"
           >
             Publier l'avis
           </button>
         </div>
 
-        {/* Reviews list */}
         {reviews.length === 0 ? (
           <p className="text-center text-slate-400 text-sm py-4">Soyez le premier à laisser un avis !</p>
         ) : (
