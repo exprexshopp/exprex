@@ -191,7 +191,12 @@ export function SellerDashboard() {
                 <ShopHoursEditor
                   shop={shop}
                   onClose={() => setShowHoursEditor(false)}
-                  onSave={() => { bumpData(); setShowHoursEditor(false); }}
+                  onSave={(updatedHours) => {
+                    // Met à jour localement pour un retour visuel immédiat
+                    setShop({ ...shop, hours: JSON.stringify(updatedHours) });
+                    bumpData();
+                    setShowHoursEditor(false);
+                  }}
                 />
               )}
               <button onClick={() => setViewMode('analytics')} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">

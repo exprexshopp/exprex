@@ -61,7 +61,7 @@ function AppContent() {
             : <CustomerDashboard />
         )}
 
-        {viewMode === 'analytics' && currentUser && <SellerAnalytics />}
+        {viewMode === 'analytics' && <SellerAnalytics />}
 
         {viewMode === 'moderation' && currentUser && (
           (currentUser.role === 'ADMIN' || currentUser.is_staff) && (

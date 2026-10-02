@@ -26,7 +26,6 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    // Initialiser les horaires à partir de la boutique
     const defaultHours: ShopHours = {
       monday: { opening_time: '08:00', closing_time: '18:00', is_closed: false },
       tuesday: { opening_time: '08:00', closing_time: '18:00', is_closed: false },
@@ -37,12 +36,24 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
       sunday: { opening_time: '08:00', closing_time: '17:00', is_closed: true },
     };
 
-    if (shop.hours && typeof shop.hours === 'object') {
-      setHours(shop.hours);
-    } else {
-      setHours(defaultHours);
+    let parsedHours = defaultHours;
+
+    if (shop.hours) {
+      if (typeof shop.hours === 'string') {
+        try {
+          const parsed = JSON.parse(shop.hours);
+          // Fusionne avec les valeurs par défaut pour éviter les jours manquants
+          parsedHours = { ...defaultHours, ...parsed };
+        } catch (e) {
+          console.warn('Erreur parsing hours:', e);
+        }
+      } else if (typeof shop.hours === 'object') {
+        parsedHours = { ...defaultHours, ...shop.hours };
+      }
     }
-  }, [shop]);
+
+    setHours(parsedHours);
+  }, [shop.id, shop.hours]); // dépendances plus précises
 
   const toggleDay = (dayKey: string) => {
     setHours(prev => ({
@@ -72,24 +83,23 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      await db.updateShopHours(shop.id, hours);
-      onSave();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la sauvegarde des horaires');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  setError('');
+  try {
+    await db.updateShopHours(shop.id, hours);
+    onSave(hours); // passe les heures mises à jour
+  } catch (err: any) {
+    setError(err.message || 'Erreur lors de la sauvegarde');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom duration-300">
-        
+
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -127,9 +137,8 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
                   >
                     <span className="font-medium text-slate-900 dark:text-white">{label}</span>
                     <div className="flex items-center gap-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        isClosed ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isClosed ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                        }`}>
                         {isClosed ? 'Fermé' : 'Ouvert'}
                       </span>
                       {isExpanded ? (
@@ -145,11 +154,10 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleDay(key)}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                            isClosed
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${isClosed
                               ? 'bg-red-500 text-white hover:bg-red-600'
                               : 'bg-green-500 text-white hover:bg-green-600'
-                          }`}
+                            }`}
                         >
                           {isClosed ? 'Ouvrir' : 'Fermer'}
                         </button>
