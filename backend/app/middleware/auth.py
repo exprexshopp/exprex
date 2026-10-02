@@ -2,8 +2,9 @@
 
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+from jose import jwt, JWTError, ExpiredSignatureError
 from typing import Optional
+from app.config import settings
 from app.models.user import User
 from app.database import get_db
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ async def get_current_user(
     """Récupérer l'utilisateur courant depuis le token JWT"""
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token invalide")
@@ -27,9 +28,9 @@ async def get_current_user(
             raise HTTPException(status_code=401, detail="Utilisateur non trouvé")
         
         return user
-    except jwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expiré")
-    except jwt.InvalidTokenError:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Token invalide")
 
 
