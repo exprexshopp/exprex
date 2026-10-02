@@ -199,69 +199,74 @@ export function SellerDashboard() {
                   }}
                 />
               )}
-              <button onClick={() => handleNavigateAnalytics()} ...>
-              <BarChart2 className="w-3.5 h-3.5" /> Analytics
-            </button>
-          </div>
-        </div>
+              <button
+                onClick={handleNavigateAnalytics}
+                className="flex items-center gap-1.5 px-3 py-2 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 text-sm font-semibold rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
+              >
+                <BarChart2 className="w-3.5 h-3.5" />
+                Analytics
+              </button>
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
-          <h2 className="font-bold text-slate-900 dark:text-white">Mes produits ({products.length})</h2>
-          <button onClick={() => setProductModalData({ isOpen: true, product: null })} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all active:scale-95">
-            <Plus className="w-4 h-4" /> Ajouter
-          </button>
-        </div>
-        {products.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Aucun produit. Ajoutez votre premier produit !</p>
+            </div>
           </div>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            {products.map(p => (
-              <div key={p.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                <SafeImage
-                  src={getImageUrl(p.image)}
-                  alt={p.name}
-                  square
-                  className="w-12 h-12 rounded-xl shrink-0"
-                  fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</p>
-                  <p className="text-sm font-bold text-indigo-600">{formatPrice(p.price)}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleToggleStock(p)}
-                    className={`p-1.5 rounded-lg transition-colors ${p.in_stock ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}
-                    title={p.in_stock ? 'Marquer épuisé' : 'Marquer en stock'}
-                  >
-                    {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                  </button>
-                  <button onClick={() => setProductModalData({ isOpen: true, product: p })} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  {deleteConfirm === p.id ? (
-                    <div className="flex gap-1">
-                      <button onClick={() => handleDeleteProduct(p.id)} className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-lg">Oui</button>
-                      <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">Non</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setDeleteConfirm(p.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="font-bold text-slate-900 dark:text-white">Mes produits ({products.length})</h2>
+              <button onClick={() => setProductModalData({ isOpen: true, product: null })} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all active:scale-95">
+                <Plus className="w-4 h-4" /> Ajouter
+              </button>
+            </div>
+            {products.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Aucun produit. Ajoutez votre premier produit !</p>
               </div>
-            ))}
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {products.map(p => (
+                  <div key={p.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <SafeImage
+                      src={getImageUrl(p.image)}
+                      alt={p.name}
+                      square
+                      className="w-12 h-12 rounded-xl shrink-0"
+                      fallbackIcon={<Package className="w-6 h-6 text-slate-400" />}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{p.name}</p>
+                      <p className="text-sm font-bold text-indigo-600">{formatPrice(p.price)}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleToggleStock(p)}
+                        className={`p-1.5 rounded-lg transition-colors ${p.in_stock ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                        title={p.in_stock ? 'Marquer épuisé' : 'Marquer en stock'}
+                      >
+                        {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                      </button>
+                      <button onClick={() => setProductModalData({ isOpen: true, product: p })} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      {deleteConfirm === p.id ? (
+                        <div className="flex gap-1">
+                          <button onClick={() => handleDeleteProduct(p.id)} className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-lg">Oui</button>
+                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">Non</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteConfirm(p.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </>
-  )
-}
+        </>
+      )
+      }
     </div >
   );
 }
