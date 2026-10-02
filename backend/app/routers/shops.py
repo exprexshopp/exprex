@@ -214,18 +214,41 @@ async def get_shop_analytics(
     
     total_views = 0
     total_whatsapp = 0
+    products_with_analytics = []
     
     for product in products:
-        analytics = db.query(Analytics).filter(Analytics.product_id == product.id).first()
-        if analytics:
-            total_views += analytics.views_count or 0
-            total_whatsapp += analytics.whatsapp_clicks or 0
+        analytics = db.query(Analytics).filter(
+            Analytics.product_id == product.id
+        ).first()
+        
+        views = analytics.views_count if analytics else 0
+        whatsapp = analytics.whatsapp_clicks if analytics else 0
+        
+        total_views += views or 0
+        total_whatsapp += whatsapp or 0
+        
+        # ✅ Construire un dictionnaire avec les compteurs inclus
+        products_with_analytics.append({
+            "id": product.id,
+            "shop_id": product.shop_id,
+            "name": product.name,
+            "slug": product.slug,
+            "image": product.image,
+            "price": product.price,
+            "category": product.category,
+            "subcategory_name": product.subcategory_name,
+            "in_stock": product.in_stock,
+            "created_at": product.created_at.isoformat() if product.created_at else None,
+            # ✅ Compteurs analytics (ce qui manquait)
+            "views_count": views or 0,
+            "whatsapp_clicks": whatsapp or 0,
+        })
     
     return {
         "totalViews": total_views,
         "totalWhatsApp": total_whatsapp,
         "totalRevenue": 0,
-        "products": products
+        "products": products_with_analytics,
     }
 
 # ✅ PATCH - Approuver une boutique
