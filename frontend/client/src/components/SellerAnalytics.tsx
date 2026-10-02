@@ -5,7 +5,7 @@ import { db } from '../services/db';
 import { formatPrice } from '../lib/format';
 
 export function SellerAnalytics() {
-  const { currentUser, setViewMode, dataVersion } = useApp();
+  const { currentUser, handleNavigateDashboard, dataVersion } = useApp();
   const [analytics, setAnalytics] = useState<any>({
     totalViews: 0,
     totalWhatsApp: 0,
@@ -57,7 +57,7 @@ export function SellerAnalytics() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => setViewMode('dashboard')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <button onClick={handleNavigateDashboard} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
         <div>

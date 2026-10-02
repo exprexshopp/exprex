@@ -40,6 +40,7 @@ interface AppContextValue {
   handleSelectProductDetail: (slug: string) => void;
   handleNavigateDashboard: () => void;
   handleNavigateModeration: () => void;
+  handleNavigateAnalytics: () => void;
   handleOpenAuthModal: (reason?: string, role?: UserRole) => void;
   handleLogout: () => void;
   handleChangeRole: (role: UserRole) => void;
@@ -122,6 +123,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (path === '/moderation') {
       if (viewMode !== 'moderation') setViewMode('moderation');
+      return;
+    }
+
+    if (path === '/analytics') {
+      if (viewMode !== 'analytics') setViewMode('analytics');
       return;
     }
   }, [location, viewMode, selectedShopSlug, selectedProductSlug]);
@@ -261,6 +267,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLocation('/moderation');
   }, [currentUser, handleOpenAuthModal, setLocation]);
 
+  const handleNavigateAnalytics = useCallback(() => {
+    if (!currentUser) {
+      handleOpenAuthModal('Connectez-vous pour accéder à votre espace.');
+      return;
+    }
+    setViewMode('analytics');
+    setLocation('/analytics');
+  }, [currentUser, handleOpenAuthModal, setLocation]);
+
   const handleQuickWhatsApp = (product: Product) => setWhatsAppModalData({ isOpen: true, product });
 
   const handleSaveShop = async (data: Partial<Shop> & { owner_id: string }) => {
@@ -390,7 +405,7 @@ const toggleFavorite = useCallback(async (productId: string) => {
       productModalData, setProductModalData,
       whatsAppModalData, setWhatsAppModalData,
       handleNavigateHome, handleSelectShopVitrine, handleSelectProductDetail,
-      handleNavigateDashboard, handleNavigateModeration, handleOpenAuthModal,
+      handleNavigateDashboard, handleNavigateModeration, handleNavigateAnalytics, handleOpenAuthModal,
       handleLogout, handleChangeRole, handleResetData,
       handleFilterChange, handleClearFilters,
       handleQuickWhatsApp, handleSaveShop, handleSaveProduct, handleAuthenticateStaff,

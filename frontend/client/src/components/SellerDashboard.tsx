@@ -9,7 +9,7 @@ import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
 export function SellerDashboard() {
-  const { currentUser, setShopModalData, setProductModalData, setViewMode, handleSelectShopVitrine, handleSelectProductDetail, bumpData, dataVersion } = useApp();
+  const { currentUser, setShopModalData, setProductModalData, handleSelectShopVitrine, handleSelectProductDetail, handleNavigateAnalytics, bumpData, dataVersion } = useApp();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -199,7 +199,7 @@ export function SellerDashboard() {
                   }}
                 />
               )}
-              <button onClick={() => handleNavigate('/analytics')} ...>
+              <button onClick={() => handleNavigateAnalytics()} ...>
               <BarChart2 className="w-3.5 h-3.5" /> Analytics
             </button>
           </div>
