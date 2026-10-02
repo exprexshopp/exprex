@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  BarChart2,
-  Eye,
-  MessageCircle,
-  Package,
-  ArrowLeft,
-} from 'lucide-react';
+import { BarChart2, Eye, MessageCircle, Package, ArrowLeft } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice } from '../lib/format';
@@ -16,6 +10,8 @@ type AnalyticsProduct = {
   price: number;
   views_count?: number;
   whatsapp_clicks?: number;
+  views?: number;
+  whatsappClicks?: number;
 };
 
 type AnalyticsData = {
@@ -39,18 +35,18 @@ export function SellerAnalytics() {
     dataVersion,
   } = useApp();
 
-  const [analytics, setAnalytics] =
-    useState<AnalyticsData>(EMPTY_ANALYTICS);
-
+  const [analytics, setAnalytics] = useState<AnalyticsData>(EMPTY_ANALYTICS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadAnalytics() {
+    const loadAnalytics = async () => {
       if (!currentUser?.id) {
-        setAnalytics(EMPTY_ANALYTICS);
-        setLoading(false);
+        if (!cancelled) {
+          setAnalytics(EMPTY_ANALYTICS);
+          setLoading(false);
+        }
         return;
       }
 
@@ -61,7 +57,7 @@ export function SellerAnalytics() {
 
         if (cancelled) return;
 
-        if (!shop?.id) {
+        if (!shop) {
           setAnalytics(EMPTY_ANALYTICS);
           return;
         }
@@ -70,13 +66,46 @@ export function SellerAnalytics() {
 
         if (cancelled) return;
 
+        /*
+         * IMPORTANT :
+         * Les compteurs affichés dans ProductDetail sont ceux du produit
+         * lui-même : product.views_count.
+         *
+         * On normalise ici les données retournées par getShopAnalytics()
+         * afin que l'UI fonctionne même si le backend renvoie certains
+         * compteurs sous une autre forme.
+         */
+        const rawProducts = Array.isArray(data?.products)
+          ? data.products
+          : [];
+
+        const products: AnalyticsProduct[] = rawProducts.map((product: any) => ({
+          ...product,
+
+          // Source principale : les compteurs du produit.
+          views_count: Number(
+            product.views_count ??
+            product.views ??
+            0
+          ),
+
+          whatsapp_clicks: Number(
+            product.whatsapp_clicks ??
+            product.whatsappClicks ??
+            0
+          ),
+        }));
+
+        /*
+         * Les totaux restent ceux fournis par getShopAnalytics().
+         * On ne les recalcule pas à partir de products pour ne pas
+         * changer la logique existante des analytics globaux.
+         */
         setAnalytics({
           totalViews: Number(data?.totalViews ?? 0),
           totalWhatsApp: Number(data?.totalWhatsApp ?? 0),
           totalRevenue: Number(data?.totalRevenue ?? 0),
-          products: Array.isArray(data?.products)
-            ? data.products
-            : [],
+          products,
         });
       } catch (error) {
         console.error('Erreur chargement analytics:', error);
@@ -89,7 +118,7 @@ export function SellerAnalytics() {
           setLoading(false);
         }
       }
-    }
+    };
 
     loadAnalytics();
 
@@ -106,15 +135,12 @@ export function SellerAnalytics() {
     );
   }
 
-  const views = analytics.totalViews;
-  const whatsapp = analytics.totalWhatsApp;
-  const revenue = analytics.totalRevenue;
-  const products = analytics.products;
-
-  const whatsappRate =
-    views > 0
-      ? ((whatsapp / views) * 100).toFixed(1)
-      : '0.0';
+  const {
+    totalViews,
+    totalWhatsApp,
+    totalRevenue,
+    products,
+  } = analytics;
 
   return (
     <div className="space-y-4">
@@ -124,7 +150,7 @@ export function SellerAnalytics() {
         <button
           onClick={handleNavigateDashboard}
           className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          aria-label="Retour au dashboard"
+          aria-label="Retour au tableau de bord"
         >
           <ArrowLeft className="w-5 h-5 text-slate-500" />
         </button>
@@ -133,67 +159,55 @@ export function SellerAnalytics() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             Analytics
           </h1>
-
           <p className="text-sm text-slate-500">
             Statistiques de votre boutique
           </p>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Totaux boutique */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          {
+            label: 'Vues totales',
+            value: totalViews,
+            icon: Eye,
+            color: 'text-sky-600',
+            bg: 'bg-sky-50 dark:bg-sky-900/20',
+          },
+          {
+            label: 'Clics WhatsApp',
+            value: totalWhatsApp,
+            icon: MessageCircle,
+            color: 'text-green-600',
+            bg: 'bg-green-50 dark:bg-green-900/20',
+          },
+          {
+            label: 'Revenus estimés',
+            value: formatPrice(totalRevenue),
+            icon: BarChart2,
+            color: 'text-indigo-600',
+            bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+          },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div
+            key={label}
+            className={`${bg} rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-700`}
+          >
+            <Icon className={`w-6 h-6 ${color} mx-auto mb-2`} />
 
-        <div className="bg-sky-50 dark:bg-sky-900/20 rounded-2xl p-4 text-center border border-sky-100 dark:border-sky-800">
-          <Eye className="w-6 h-6 text-sky-600 mx-auto mb-2" />
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
+              {value}
+            </p>
 
-          <p className="text-xl font-bold text-slate-900 dark:text-white">
-            {views}
-          </p>
-
-          <p className="text-[10px] text-slate-500 font-medium">
-            Vues totales
-          </p>
-        </div>
-
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 text-center border border-green-100 dark:border-green-800">
-          <MessageCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
-
-          <p className="text-xl font-bold text-slate-900 dark:text-white">
-            {whatsapp}
-          </p>
-
-          <p className="text-[10px] text-slate-500 font-medium">
-            Clics WhatsApp
-          </p>
-        </div>
-
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 text-center border border-indigo-100 dark:border-indigo-800">
-          <BarChart2 className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
-
-          <p className="text-xl font-bold text-slate-900 dark:text-white">
-            {formatPrice(revenue)}
-          </p>
-
-          <p className="text-[10px] text-slate-500 font-medium">
-            Revenus estimés
-          </p>
-        </div>
-
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 text-center border border-amber-100 dark:border-amber-800">
-          <MessageCircle className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-
-          <p className="text-xl font-bold text-slate-900 dark:text-white">
-            {whatsappRate}%
-          </p>
-
-          <p className="text-[10px] text-slate-500 font-medium">
-            Taux de contact
-          </p>
-        </div>
-
+            <p className="text-[10px] text-slate-500 font-medium">
+              {label}
+            </p>
+          </div>
+        ))}
       </div>
 
-      {/* Produits */}
+      {/* Performance produits */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm">
 
         <div className="flex items-center gap-2 mb-4">
@@ -204,37 +218,31 @@ export function SellerAnalytics() {
           </h2>
 
           <span className="ml-auto text-xs text-slate-400">
-            {products.length} produit{products.length > 1 ? 's' : ''}
+            {products.length} produits
           </span>
         </div>
 
         {products.length === 0 ? (
-
-          <div className="text-center py-8">
-            <Package className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-
-            <p className="text-sm text-slate-400">
-              Aucun produit dans votre boutique
-            </p>
-          </div>
-
+          <p className="text-center text-slate-400 text-sm py-8">
+            Aucun produit dans votre boutique
+          </p>
         ) : (
-
           <div className="space-y-3">
 
             {products.map((product) => {
-              const productViews =
-                Number(product.views_count) || 0;
+              const views = Number(product.views_count ?? 0);
+              const whatsapp = Number(product.whatsapp_clicks ?? 0);
 
-              const productWhatsApp =
-                Number(product.whatsapp_clicks) || 0;
+              const conversion =
+                views > 0
+                  ? Math.round((whatsapp / views) * 100)
+                  : 0;
 
               return (
                 <div
                   key={product.id}
                   className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl"
                 >
-
                   <div className="flex items-center gap-3">
 
                     <div className="flex-1 min-w-0">
@@ -247,67 +255,53 @@ export function SellerAnalytics() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-4 text-xs shrink-0">
 
                       <span className="flex items-center gap-1 text-slate-500">
                         <Eye className="w-3.5 h-3.5 text-sky-500" />
-                        {productViews}
+                        {views}
                       </span>
 
                       <span className="flex items-center gap-1 text-slate-500">
                         <MessageCircle className="w-3.5 h-3.5 text-green-500" />
-                        {productWhatsApp}
+                        {whatsapp}
                       </span>
 
                     </div>
-
                   </div>
 
-                  {/* Mini indicateur visuel */}
-                  <div className="mt-3">
+                  {/* Conversion vue → WhatsApp */}
+                  <div className="mt-3 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">
+                      Vues → WhatsApp
+                    </span>
 
-                    <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                      <span>Vues → WhatsApp</span>
-
-                      <span>
-                        {productViews > 0
-                          ? `${(
-                              (productWhatsApp / productViews) *
-                              100
-                            ).toFixed(1)}%`
-                          : '0%'}
-                      </span>
-                    </div>
-
-                    <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 rounded-full"
-                        style={{
-                          width: `${
-                            productViews > 0
-                              ? Math.min(
-                                  (productWhatsApp / productViews) *
-                                    100,
-                                  100
-                                )
-                              : 0
-                          }%`,
-                        }}
-                      />
-                    </div>
-
+                    <span
+                      className={
+                        conversion > 0
+                          ? 'font-semibold text-green-600'
+                          : 'text-slate-400'
+                      }
+                    >
+                      {conversion}%
+                    </span>
                   </div>
 
+                  <div className="mt-1 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(conversion, 100)}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               );
             })}
 
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 }
