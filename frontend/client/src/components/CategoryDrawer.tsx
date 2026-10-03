@@ -1,476 +1,237 @@
-// Design: Afrique Moderne — drawer latéral avec catégories et sous-catégories
-
-import React, { useEffect, useState } from 'react';
-import { X, ChevronRight, Grid3X3 } from 'lucide-react';
+// Design: palette de catégories avec icônes + sous-catégories en dessous
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  X, Smartphone, Shirt, Home, Gamepad2, Car, Sparkles,
+  UtensilsCrossed, Heart, BookOpen, Dumbbell, Baby, Briefcase,
+  Grid3X3, ChevronRight,
+} from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 
-type Category = {
-  id: string | number;
-  name: string;
-  slug: string;
+type Category = { id: string | number; name: string; slug: string };
+type Subcategory = { id: string | number; name: string; slug: string };
+
+// Associe un slug/nom à une icône + couleur
+const ICONS: Record<string, { Icon: any; color: string }> = {
+  telephone:  { Icon: Smartphone,      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' },
+  phone:      { Icon: Smartphone,      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' },
+  mode:       { Icon: Shirt,           color: 'text-pink-600   bg-pink-50   dark:bg-pink-900/30'   },
+  vetement:   { Icon: Shirt,           color: 'text-pink-600   bg-pink-50   dark:bg-pink-900/30'   },
+  maison:     { Icon: Home,            color: 'text-amber-600  bg-amber-50  dark:bg-amber-900/30'  },
+  gaming:     { Icon: Gamepad2,        color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30' },
+  auto:       { Icon: Car,             color: 'text-slate-600  bg-slate-50  dark:bg-slate-900/30'  },
+  beaute:     { Icon: Sparkles,        color: 'text-rose-600   bg-rose-50   dark:bg-rose-900/30'   },
+  food:       { Icon: UtensilsCrossed, color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30' },
+  sante:      { Icon: Heart,           color: 'text-red-600    bg-red-50    dark:bg-red-900/30'    },
+  livre:      { Icon: BookOpen,        color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' },
+  sport:      { Icon: Dumbbell,        color: 'text-cyan-600   bg-cyan-50   dark:bg-cyan-900/30'   },
+  bebe:       { Icon: Baby,            color: 'text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/30' },
+  service:    { Icon: Briefcase,       color: 'text-blue-600   bg-blue-50   dark:bg-blue-900/30'   },
 };
 
-type Subcategory = {
-  id: string | number;
-  name: string;
-  slug: string;
-};
+function pickIcon(cat: Category) {
+  const key = (cat.slug || cat.name || '').toLowerCase();
+  for (const k of Object.keys(ICONS)) {
+    if (key.includes(k)) return ICONS[k];
+  }
+  return { Icon: Grid3X3, color: 'text-slate-600 bg-slate-50 dark:bg-slate-800' };
+}
 
 export function CategoryDrawer() {
   const {
-    isCategoryDrawerOpen,
-    setIsCategoryDrawerOpen,
-    filterParams,
-    handleFilterChange,
-    dataVersion,
+    isCategoryDrawerOpen, setIsCategoryDrawerOpen,
+    filterParams, handleFilterChange, dataVersion,
   } = useApp();
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<
-    Record<string, Subcategory[]>
-  >({});
-  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [subcategories, setSubcategories] = useState<Record<string, Subcategory[]>>({});
   const [loading, setLoading] = useState(true);
-  const [loadingSubcategory, setLoadingSubcategory] = useState<string | null>(
-    null
-  );
+  const [loadingSub, setLoadingSub] = useState<string | null>(null);
+  const [activeCat, setActiveCat] = useState<Category | null>(null);
 
-  /**
-   * Chargement des catégories
-   */
+  // Chargement des catégories
   useEffect(() => {
     let cancelled = false;
-
-    const loadCategories = async () => {
-      setLoading(true);
-
-      try {
-        const data = await db.getCategories();
-
-        if (!cancelled) {
-          const normalized = Array.isArray(data)
-            ? data.filter(
-                (cat: any) =>
-                  cat &&
-                  cat.id != null &&
-                  cat.slug &&
-                  cat.name
-              )
-            : [];
-
-          setCategories(normalized);
-        }
-      } catch (error) {
-        console.error('Erreur chargement catégories:', error);
-
-        if (!cancelled) {
-          setCategories([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadCategories();
-
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    db.getCategories()
+      .then((data) => {
+        if (cancelled) return;
+        setCategories(Array.isArray(data)
+          ? data.filter((c: any) => c && c.id != null && c.slug && c.name)
+          : []);
+      })
+      .catch(() => !cancelled && setCategories([]))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
   }, [dataVersion]);
 
-  /**
-   * Réinitialiser le cache des sous-catégories
-   * lorsqu'une nouvelle version des données est disponible.
-   */
-  useEffect(() => {
-    setSubcategories({});
-  }, [dataVersion]);
-
-  /**
-   * Si une catégorie est actuellement sélectionnée,
-   * on peut automatiquement l'ouvrir lorsque le drawer s'ouvre.
-   */
+  // Ouverture auto si une catégorie est déjà sélectionnée
   useEffect(() => {
     if (!isCategoryDrawerOpen) return;
+    if (!filterParams.category) { setActiveCat(null); return; }
+    const found = categories.find(c => c.slug === filterParams.category);
+    if (found) setActiveCat(found);
+  }, [isCategoryDrawerOpen, filterParams.category, categories]);
 
-    if (!filterParams.category) {
-      setExpandedCat(null);
-      return;
-    }
-
-    const selectedCategory = categories.find(
-      (cat) => cat.slug === filterParams.category
-    );
-
-    if (selectedCategory) {
-      setExpandedCat(String(selectedCategory.id));
-    }
-  }, [
-    isCategoryDrawerOpen,
-    filterParams.category,
-    categories,
-  ]);
-
-  /**
-   * Chargement des sous-catégories de la catégorie ouverte.
-   */
+  // Chargement des sous-catégories quand une catégorie est active
   useEffect(() => {
-    let cancelled = false;
+    if (!activeCat) return;
+    const id = String(activeCat.id);
+    if (subcategories[id]) return;
+    setLoadingSub(id);
+    db.getSubcategories(activeCat.id)
+      .then(data => setSubcategories(prev => ({ ...prev, [id]: Array.isArray(data) ? data : [] })))
+      .catch(() => setSubcategories(prev => ({ ...prev, [id]: [] })))
+      .finally(() => setLoadingSub(null));
+  }, [activeCat, subcategories]);
 
-    const loadSubcategories = async () => {
-      if (!expandedCat) return;
+  const activeSubs = useMemo(() => {
+    if (!activeCat) return [];
+    return subcategories[String(activeCat.id)] || [];
+  }, [activeCat, subcategories]);
 
-      // Déjà chargées
-      if (Object.prototype.hasOwnProperty.call(subcategories, expandedCat)) {
-        return;
-      }
-
-      setLoadingSubcategory(expandedCat);
-
-      try {
-        const category = categories.find(
-          (cat) => String(cat.id) === expandedCat
-        );
-
-        if (!category) {
-          if (!cancelled) {
-            setSubcategories((prev) => ({
-              ...prev,
-              [expandedCat]: [],
-            }));
-          }
-          return;
-        }
-
-        const data = await db.getSubcategories(category.id);
-
-        if (!cancelled) {
-          setSubcategories((prev) => ({
-            ...prev,
-            [expandedCat]: Array.isArray(data) ? data : [],
-          }));
-        }
-      } catch (error) {
-        console.error(
-          'Erreur chargement sous-catégories:',
-          error
-        );
-
-        if (!cancelled) {
-          setSubcategories((prev) => ({
-            ...prev,
-            [expandedCat]: [],
-          }));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingSubcategory(null);
-        }
-      }
-    };
-
-    loadSubcategories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [expandedCat, categories, subcategories]);
-
-  /**
-   * Sélection d'une catégorie / sous-catégorie.
-   */
-  const handleSelectCategory = (
-    catSlug: string,
-    subSlug?: string
-  ) => {
-    handleFilterChange({
-      category: catSlug,
-      subcategory: subSlug || '',
-    });
-
+  const selectCategory = (cat: Category, subSlug?: string) => {
+    handleFilterChange({ category: cat.slug, subcategory: subSlug || '' });
     setIsCategoryDrawerOpen(false);
   };
 
-  /**
-   * Réinitialisation complète du filtre catégorie.
-   */
-  const handleSelectAll = () => {
-    handleFilterChange({
-      category: '',
-      subcategory: '',
-    });
-
-    setExpandedCat(null);
-    setIsCategoryDrawerOpen(false);
-  };
-
-  /**
-   * Ouvre / ferme une catégorie.
-   */
-  const toggleExpand = (categoryId: string | number) => {
-    const id = String(categoryId);
-
-    setExpandedCat((current) =>
-      current === id ? null : id
-    );
-  };
-
-  /**
-   * Ferme le drawer.
-   */
-  const closeDrawer = () => {
-    setIsCategoryDrawerOpen(false);
-  };
-
-  if (!isCategoryDrawerOpen) {
-    return null;
-  }
+  if (!isCategoryDrawerOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={closeDrawer}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCategoryDrawerOpen(false)} />
 
-      {/* Drawer */}
-      <div className="relative ml-auto w-80 max-w-full h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="relative ml-auto w-full sm:w-[420px] h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Catégories
-            </h2>
-
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Catégories</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Filtrer les produits
+              Trouvez rapidement ce que vous recherchez
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={closeDrawer}
-            aria-label="Fermer les catégories"
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
+          <button onClick={() => setIsCategoryDrawerOpen(false)} aria-label="Fermer"
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
 
-        {/* Contenu */}
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
+        {/* Corps scrollable */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {loading ? (
+            <div className="flex flex-col items-center gap-3 py-16">
               <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
-
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Chargement des catégories...
-              </p>
+              <p className="text-sm text-slate-500">Chargement...</p>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            {/* Toutes les catégories */}
-            <button
-              type="button"
-              onClick={handleSelectAll}
-              className={`w-full flex items-center gap-3 text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                !filterParams.category
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Grid3X3 className="w-4 h-4 shrink-0" />
+          ) : categories.length === 0 ? (
+            <div className="py-16 text-center">
+              <Grid3X3 className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Aucune catégorie</p>
+            </div>
+          ) : (
+            <>
+              {/* Bouton "Toutes" */}
+              <button
+                onClick={() => { handleFilterChange({ category: '', subcategory: '' }); setIsCategoryDrawerOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  !filterParams.category
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <Grid3X3 className="w-4 h-4" />
+                Toutes les catégories
+              </button>
 
-              <span>Toutes les catégories</span>
-            </button>
-
-            {/* Aucun résultat */}
-            {categories.length === 0 && (
-              <div className="py-12 text-center">
-                <Grid3X3 className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  Aucune catégorie
-                </p>
-
-                <p className="text-xs text-slate-400 mt-1">
-                  Les catégories seront disponibles prochainement.
-                </p>
-              </div>
-            )}
-
-            {/* Catégories */}
-            {categories.map((cat) => {
-              const categoryId = String(cat.id);
-              const subs = subcategories[categoryId] || [];
-
-              const isExpanded =
-                expandedCat === categoryId;
-
-              const isActive =
-                filterParams.category === cat.slug;
-
-              const isSubcategoryActive =
-                isActive && Boolean(filterParams.subcategory);
-
-              const isLoadingSubcategory =
-                loadingSubcategory === categoryId;
-
-              return (
-                <div key={cat.id}>
-                  {/* Catégorie */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      /*
-                       * Si les sous-catégories sont déjà chargées,
-                       * on sait immédiatement s'il faut ouvrir ou sélectionner.
-                       */
-                      if (
-                        Object.prototype.hasOwnProperty.call(
-                          subcategories,
-                          categoryId
-                        )
-                      ) {
-                        if (subs.length > 0) {
-                          toggleExpand(categoryId);
+              {/* PALETTE */}
+              <div className="grid grid-cols-2 gap-3">
+                {categories.map(cat => {
+                  const { Icon, color } = pickIcon(cat);
+                  const isActive = filterParams.category === cat.slug;
+                  const isOpen   = activeCat?.id === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        if (isActive || isOpen) {
+                          setActiveCat(isOpen ? null : cat);
+                          if (!isOpen) return;
                         } else {
-                          handleSelectCategory(cat.slug);
+                          setActiveCat(cat);
                         }
+                      }}
+                      className={`flex flex-col items-start gap-2 p-3 rounded-2xl border text-left transition-all ${
+                        isActive || isOpen
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+                        <Icon className="w-5 h-5" />
+                      </span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-2">
+                        {cat.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                        return;
-                      }
-
-                      /*
-                       * Première ouverture :
-                       * on ouvre d'abord pour déclencher le chargement.
-                       */
-                      toggleExpand(categoryId);
-                    }}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-between ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="truncate">
-                      {cat.name}
+              {/* SOUS-CATÉGORIES DE LA CATÉGORIE ACTIVE */}
+              {activeCat && (
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {activeCat.name}
                     </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isSubcategoryActive && (
-                        <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                      )}
+                  {loadingSub === String(activeCat.id) ? (
+                    <div className="py-4 text-center text-xs text-slate-400">Chargement...</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => selectCategory(activeCat)}
+                        className={`px-3 py-2 text-sm rounded-xl border transition-colors ${
+                          filterParams.category === activeCat.slug && !filterParams.subcategory
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+                        }`}
+                      >
+                        Toutes
+                      </button>
 
-                      {isLoadingSubcategory ? (
-                        <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        /*
-                         * Si les sous-catégories sont connues et qu'il
-                         * n'y en a aucune, on n'affiche pas la flèche.
-                         */
-                        (subs.length > 0 ||
-                          !Object.prototype.hasOwnProperty.call(
-                            subcategories,
-                            categoryId
-                          )) && (
-                          <ChevronRight
-                            className={`w-4 h-4 transition-transform ${
-                              isExpanded
-                                ? 'rotate-90'
-                                : ''
-                            }`}
-                          />
-                        )
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Sous-catégories */}
-                  {isExpanded && (
-                    <div className="ml-4 mt-1 mb-1 space-y-0.5 border-l border-slate-200 dark:border-slate-700 pl-2">
-                      {isLoadingSubcategory && subs.length === 0 ? (
-                        <div className="px-4 py-3 text-xs text-slate-400">
-                          Chargement...
-                        </div>
-                      ) : subs.length > 0 ? (
-                        <>
-                          {/* Tous les produits de la catégorie */}
+                      {activeSubs.map(sub => {
+                        const isSub = filterParams.category === activeCat.slug
+                                   && filterParams.subcategory === sub.slug;
+                        return (
                           <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectCategory(cat.slug)
-                            }
-                            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
-                              isActive &&
-                              !filterParams.subcategory
-                                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            key={sub.id}
+                            onClick={() => selectCategory(activeCat, sub.slug)}
+                            className={`px-3 py-2 text-sm rounded-xl border transition-colors ${
+                              isSub
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
                             }`}
                           >
-                            Tout — {cat.name}
+                            {sub.name}
                           </button>
+                        );
+                      })}
 
-                          {/* Sous-catégories */}
-                          {subs.map((sub) => {
-                            const isSubActive =
-                              filterParams.category ===
-                                cat.slug &&
-                              filterParams.subcategory ===
-                                sub.slug;
-
-                            return (
-                              <button
-                                type="button"
-                                key={sub.id}
-                                onClick={() =>
-                                  handleSelectCategory(
-                                    cat.slug,
-                                    sub.slug
-                                  )
-                                }
-                                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
-                                  isSubActive
-                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
-                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                }`}
-                              >
-                                {sub.name}
-                              </button>
-                            );
-                          })}
-                        </>
-                      ) : (
-                        /*
-                         * Une catégorie sans sous-catégorie
-                         * reste sélectionnable.
-                         */
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleSelectCategory(cat.slug)
-                          }
-                          className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
-                            isActive
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-medium'
-                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          Tous les produits
-                        </button>
+                      {activeSubs.length === 0 && (
+                        <p className="text-xs text-slate-400 italic">
+                          Aucune sous-catégorie
+                        </p>
                       )}
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

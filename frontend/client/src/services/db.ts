@@ -460,76 +460,26 @@ export const db = {
 
   // Products
   getCatalogProducts: async (filters: any) => {
-    const params: any = {};
-    if (filters.city) params.city = filters.city;
-    if (filters.q) params.search = filters.q;
-    if (filters.category) params.category = filters.category;
-    if (filters.subcategory) params.subcategory = filters.subcategory;
-    if (filters.price_min !== null && filters.price_min !== undefined) params.price_min = filters.price_min;
-    if (filters.price_max !== null && filters.price_max !== undefined) params.price_max = filters.price_max;
-    if (filters.sort_by) params.sort_by = filters.sort_by;
+  const params: any = {};
+  if (filters.city)          params.city        = filters.city;
+  if (filters.q)             params.search      = filters.q;
+  if (filters.category)      params.category    = filters.category;
+  if (filters.subcategory)   params.subcategory = filters.subcategory;
+  if (filters.price_min != null) params.price_min = filters.price_min;
+  if (filters.price_max != null) params.price_max = filters.price_max;
+  if (filters.sort_by)       params.sort_by     = filters.sort_by;
 
-    let all = await products.getAll(params);
-    let filterSummary = 'Tous les produits';
-
-    if (!Array.isArray(all)) all = [];
-
-    if (filters.city && !params.city) {
-      all = all.filter((p: any) => p.shop_city === filters.city);
-      filterSummary = `Ville: ${filters.city}`;
-    }
-
-    if (filters.q && !params.search) {
-      const query = filters.q.toLowerCase();
-      all = all.filter((p: any) =>
-        (p.name && p.name.toLowerCase().includes(query)) ||
-        (p.description && p.description.toLowerCase().includes(query)) ||
-        (p.shop_name && p.shop_name.toLowerCase().includes(query))
-      );
-      filterSummary = `Recherche: "${filters.q}"`;
-    }
-
-    if (filters.category && !params.category) {
-      all = all.filter((p: any) => p.category === filters.category);
-      filterSummary = `Catégorie: ${filters.category}`;
-    }
-
-    if (filters.subcategory && !params.subcategory) {
-      all = all.filter((p: any) => p.subcategory_name === filters.subcategory);
-      filterSummary = `Sous-catégorie: ${filters.subcategory}`;
-    }
-
-    if (!params.price_min && filters.price_min !== null && filters.price_min !== undefined) {
-      all = all.filter((p: any) => p.price >= filters.price_min);
-    }
-    if (!params.price_max && filters.price_max !== null && filters.price_max !== undefined) {
-      all = all.filter((p: any) => p.price <= filters.price_max);
-    }
-
-    if (!params.sort_by && filters.sort_by) {
-      switch (filters.sort_by) {
-        case 'price_asc':
-          all.sort((a: any, b: any) => a.price - b.price);
-          break;
-        case 'price_desc':
-          all.sort((a: any, b: any) => b.price - a.price);
-          break;
-        case 'newest':
-          all.sort((a: any, b: any) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          break;
-        case 'rating':
-          all.sort((a: any, b: any) => (b.reviews_count || 0) - (a.reviews_count || 0));
-          break;
-        case 'favorites':
-          all.sort((a: any, b: any) => (b.favorites_count || 0) - (a.favorites_count || 0));
-          break;
-      }
-    }
-
-    return { products: all, total: all.length, filterSummary };
-  },
+  const all = await products.getAll(params);
+  return {
+    products: Array.isArray(all) ? all : [],
+    total:    Array.isArray(all) ? all.length : 0,
+    filterSummary: filters.q
+      ? `Recherche: "${filters.q}"`
+      : filters.city
+        ? `Ville: ${filters.city}`
+        : 'Tous les produits',
+  };
+},
 
   getProductBySlug: products.getBySlug,
   getProductsForShop: async (shopId: string) => {

@@ -240,6 +240,7 @@ export function CatalogFeed() {
     filterParams.subcategory,
     filterParams.price_min,
     filterParams.price_max,
+    filterParams.sort_by,
     dataVersion,
   ]);
 

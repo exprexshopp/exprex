@@ -34,27 +34,88 @@ def whatsapp_clicks(self):
 # GET
 # ============================================================
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, desc, asc
+# ... (tes imports existants)
+
 @router.get("/")
-# async def get_products(db: Session = Depends(get_db)):
-#     """Récupère tous les produits (avec slash)"""
-#     return db.query(Product).all()
-async def get_products(db: Session = Depends(get_db)):
-    """Récupère tous les produits avec leurs vues"""
-    products = db.query(Product).all()
-    
-    # Ajouter les vues pour chaque produit
+async def get_products(
+    search: str | None = Query(None),
+    category: str | None = Query(None),
+    subcategory: str | None = Query(None),
+    city: str | None = Query(None),
+    price_min: float | None = Query(None, ge=0),
+    price_max: float | None = Query(None, ge=0),
+    sort_by: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Récupère les produits avec filtres réels."""
+    query = db.query(Product).join(Shop, Product.shop_id == Shop.id)
+
+    # 🔎 Recherche texte (nom produit, description, nom boutique)
+    if search:
+        like = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Product.name.ilike(like),
+                Product.description.ilike(like),
+                Shop.name.ilike(like),
+            )
+        )
+
+    # 📂 Catégorie (slug ou nom)
+    if category:
+        query = query.filter(
+            or_(Product.category == category,
+                Product.category.ilike(f"%{category}%"))
+        )
+
+    # 📁 Sous-catégorie (slug ou nom)
+    if subcategory:
+        query = query.filter(
+            or_(Product.subcategory_name == subcategory,
+                Product.subcategory_name.ilike(f"%{subcategory}%"))
+        )
+
+    # 🏙️ Ville (via la boutique)
+    if city:
+        query = query.filter(Shop.city == city)
+
+    # 💰 Prix
+    if price_min is not None:
+        query = query.filter(Product.price >= price_min)
+    if price_max is not None:
+        query = query.filter(Product.price <= price_max)
+
+    # ↕️ Tri
+    if sort_by == "price_asc":
+        query = query.order_by(asc(Product.price))
+    elif sort_by == "price_desc":
+        query = query.order_by(desc(Product.price))
+    elif sort_by == "newest":
+        query = query.order_by(desc(Product.created_at))
+    else:
+        query = query.order_by(desc(Product.created_at))
+
+    products = query.all()
+
     result = []
     for product in products:
-        # Récupérer les analytics
-        analytics = db.query(Analytics).filter(Analytics.product_id == product.id).first()
-        
-        # Créer un dictionnaire avec toutes les propriétés du produit
-        product_dict = {
+        analytics = db.query(Analytics).filter(
+            Analytics.product_id == product.id
+        ).first()
+
+        # ✅ shop_name TOUJOURS depuis Shop.name
+        shop = db.query(Shop).filter(Shop.id == product.shop_id).first()
+
+        result.append({
             "id": product.id,
             "shop_id": product.shop_id,
-            "shop_name": product.shop_name,
-            "shop_slug": product.shop_slug,
-            "shop_whatsapp": product.shop_whatsapp,
+            "shop_name": shop.name if shop else product.shop_name,
+            "shop_slug": shop.slug if shop else product.shop_slug,
+            "shop_whatsapp": shop.whatsapp_number if shop else product.shop_whatsapp,
+            "shop_city": shop.city if shop else None,   # ← utile pour CatalogFeed
             "name": product.name,
             "description": product.description,
             "slug": product.slug,
@@ -67,17 +128,27 @@ async def get_products(db: Session = Depends(get_db)):
             "created_at": product.created_at,
             "views_count": analytics.views_count if analytics else 0,
             "whatsapp_clicks": analytics.whatsapp_clicks if analytics else 0,
-            "reviews_count": 0,  # À calculer si besoin
-            "favorites_count": 0,  # À calculer si besoin
-        }
-        result.append(product_dict)
-    
+            "reviews_count": 0,
+            "favorites_count": 0,
+        })
+
     return result
 
 @router.get("")
-async def get_products_no_slash(db: Session = Depends(get_db)):
-    """Récupère tous les produits (sans slash)"""
-    return db.query(Product).all()
+async def get_products_no_slash(
+    search: str | None = Query(None),
+    category: str | None = Query(None),
+    subcategory: str | None = Query(None),
+    city: str | None = Query(None),
+    price_min: float | None = Query(None, ge=0),
+    price_max: float | None = Query(None, ge=0),
+    sort_by: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    return await get_products(
+        search, category, subcategory, city,
+        price_min, price_max, sort_by, db
+    )
 
 @router.get("/{slug}")
 # async def get_product(slug: str, db: Session = Depends(get_db)):
