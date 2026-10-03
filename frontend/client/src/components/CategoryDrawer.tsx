@@ -75,16 +75,22 @@ export function CategoryDrawer() {
 
   // Chargement des sous-catégories quand une catégorie est active
   useEffect(() => {
-    if (!activeCat) return;
-    const id = String(activeCat.id);
-    if (subcategories[id]) return;
-    setLoadingSub(id);
-    db.getSubcategories(activeCat.id)
-      .then(data => setSubcategories(prev => ({ ...prev, [id]: Array.isArray(data) ? data : [] })))
-      .catch(() => setSubcategories(prev => ({ ...prev, [id]: [] })))
-      .finally(() => setLoadingSub(null));
-  }, [activeCat, subcategories]);
+  if (!activeCat) return;
+  const id = String(activeCat.id);
+  const existing = subcategories[id];
+  // ✅ Ne skip QUE si on a déjà des sous-catégories non vides
+  if (existing && existing.length > 0) return;
 
+  setLoadingSub(id);
+  db.getSubcategories(activeCat.id)
+    .then(data => setSubcategories(prev => ({
+      ...prev,
+      [id]: Array.isArray(data) ? data : [],
+    })))
+    .catch(() => setSubcategories(prev => ({ ...prev, [id]: [] })))
+    .finally(() => setLoadingSub(null));
+}, [activeCat]);   // ← retire subcategories des deps pour éviter les boucles
+  
   const activeSubs = useMemo(() => {
     if (!activeCat) return [];
     return subcategories[String(activeCat.id)] || [];

@@ -14,6 +14,10 @@ from datetime import datetime
 
 from sqlalchemy.orm import relationship
 
+from app.models.category import Category
+from app.models.subcategory import SubCategory
+
+
 router = APIRouter(prefix="/api/products", tags=["products"])
 
 # class Product(Base):
@@ -34,10 +38,6 @@ def whatsapp_clicks(self):
 # GET
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, desc, asc
-# ... (tes imports existants)
 
 @router.get("/")
 async def get_products(
@@ -50,63 +50,98 @@ async def get_products(
     sort_by: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    """Récupère les produits avec filtres réels."""
     query = db.query(Product).join(Shop, Product.shop_id == Shop.id)
 
-    # 🔎 Recherche texte (nom produit, description, nom boutique)
-    if search:
-        like = f"%{search.strip()}%"
-        query = query.filter(
-            or_(
-                Product.name.ilike(like),
-                Product.description.ilike(like),
-                Shop.name.ilike(like),
-            )
-        )
-
-    # 📂 Catégorie (slug ou nom)
+    # ───────────────────────────────────────────────
+    # 📂 CATÉGORIE : slug OU nom (tolérant)
+    # ───────────────────────────────────────────────
     if category:
-        query = query.filter(
-            or_(Product.category == category,
-                Product.category.ilike(f"%{category}%"))
-        )
+        # 1. Trouver la catégorie correspondante
+        cat_obj = db.query(Category).filter(
+            or_(Category.slug == category, Category.name == category)
+        ).first()
 
-    # 📁 Sous-catégorie (slug ou nom)
+        if cat_obj:
+            # 2. Trouver TOUTES les sous-catégories de cette catégorie
+            sub_ids = [
+                s.id for s in db.query(SubCategory)
+                .filter(SubCategory.category_id == cat_obj.id)
+                .all()
+            ]
+
+            # 3. Un produit appartient à la catégorie si :
+            #    - son Product.category == slug de la catégorie (legacy)
+            #    - OU son Product.subcategory_id ∈ sous-catégories
+            conditions = [
+                Product.category == cat_obj.slug,
+                Product.category == cat_obj.name,
+            ]
+            if sub_ids:
+                conditions.append(Product.subcategory_id.in_(sub_ids))
+
+            query = query.filter(or_(*conditions))
+        else:
+            # Fallback : comparaison texte brute (comportement actuel)
+            query = query.filter(
+                or_(
+                    Product.category == category,
+                    Product.category.ilike(f"%{category}%"),
+                )
+            )
+
+    # ───────────────────────────────────────────────
+    # 📁 SOUS-CATÉGORIE : slug OU nom
+    # ───────────────────────────────────────────────
     if subcategory:
-        query = query.filter(
-            or_(Product.subcategory_name == subcategory,
-                Product.subcategory_name.ilike(f"%{subcategory}%"))
-        )
+        sub_obj = db.query(SubCategory).filter(
+            or_(SubCategory.slug == subcategory, SubCategory.name == subcategory)
+        ).first()
 
-    # 🏙️ Ville (via la boutique)
+        if sub_obj:
+            # On filtre sur l'ID, ce qui est stable et fiable
+            query = query.filter(Product.subcategory_id == sub_obj.id)
+        else:
+            # Fallback nom (au cas où subcategory_id serait null en base)
+            query = query.filter(
+                or_(
+                    Product.subcategory_name == subcategory,
+                    Product.subcategory_name.ilike(f"%{subcategory}%"),
+                )
+            )
+
+    # ───────────────────────────────────────────────
+    # 🏙️ VILLE
+    # ───────────────────────────────────────────────
     if city:
         query = query.filter(Shop.city == city)
 
-    # 💰 Prix
+    # ───────────────────────────────────────────────
+    # 💰 PRIX
+    # ───────────────────────────────────────────────
     if price_min is not None:
         query = query.filter(Product.price >= price_min)
     if price_max is not None:
         query = query.filter(Product.price <= price_max)
 
-    # ↕️ Tri
+    # ───────────────────────────────────────────────
+    # ↕️ TRI
+    # ───────────────────────────────────────────────
     if sort_by == "price_asc":
         query = query.order_by(asc(Product.price))
     elif sort_by == "price_desc":
         query = query.order_by(desc(Product.price))
-    elif sort_by == "newest":
-        query = query.order_by(desc(Product.created_at))
     else:
         query = query.order_by(desc(Product.created_at))
 
+    # ───────────────────────────────────────────────
+    # Résultats enrichis
+    # ───────────────────────────────────────────────
     products = query.all()
-
     result = []
     for product in products:
         analytics = db.query(Analytics).filter(
             Analytics.product_id == product.id
         ).first()
-
-        # ✅ shop_name TOUJOURS depuis Shop.name
         shop = db.query(Shop).filter(Shop.id == product.shop_id).first()
 
         result.append({
@@ -115,7 +150,7 @@ async def get_products(
             "shop_name": shop.name if shop else product.shop_name,
             "shop_slug": shop.slug if shop else product.shop_slug,
             "shop_whatsapp": shop.whatsapp_number if shop else product.shop_whatsapp,
-            "shop_city": shop.city if shop else None,   # ← utile pour CatalogFeed
+            "shop_city": shop.city if shop else None,
             "name": product.name,
             "description": product.description,
             "slug": product.slug,
