@@ -4,7 +4,8 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     APP_NAME: str = "eXpress Shop API"
-    DEBUG: bool = True
+    # Desactive par defaut : a activer explicitement via la variable d'environnement DEBUG=true
+    DEBUG: bool = False
     DATABASE_URL: str
     # Obligatoire, sans valeur par défaut : si SECRET_KEY est absente de
     # l'environnement, le démarrage échoue (pydantic ValidationError, qui
