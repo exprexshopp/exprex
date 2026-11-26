@@ -5,6 +5,8 @@ import { db } from '../services/db';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
+import { logger } from "../lib/logger";
+
 export function ShopsDrawer() {
   const { isShopsDrawerOpen, setIsShopsDrawerOpen, handleSelectShopVitrine } = useApp();
   const [shops, setShops] = useState<any[]>([]);
@@ -19,7 +21,7 @@ export function ShopsDrawer() {
         // ✅ S'assurer que data est un tableau
         setShops(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Erreur chargement boutiques:', error);
+        logger.error('Erreur chargement boutiques:', error);
         setShops([]);
       } finally {
         setLoading(false);

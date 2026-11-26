@@ -5,6 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice, formatDate } from '../lib/format';
 
+import { logger } from "../lib/logger";
+
 export function CustomerDashboard() {
   const { currentUser, handleSelectProductDetail, handleQuickWhatsApp } = useApp();
   
@@ -24,7 +26,7 @@ export function CustomerDashboard() {
         // Pour l'instant, on simule
         setReviews([]);
       } catch (error) {
-        console.error('Erreur chargement données client:', error);
+        logger.error('Erreur chargement données client:', error);
         setFavorites([]);
         setReviews([]);
       } finally {

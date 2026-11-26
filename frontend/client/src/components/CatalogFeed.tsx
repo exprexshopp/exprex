@@ -1,6 +1,6 @@
 // Design: Afrique Moderne — catalogue avec hero gradient, filtres pill, grille responsive
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   SlidersHorizontal,
   MapPin,
@@ -20,6 +20,8 @@ import {
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { ProductCard } from './ProductCard';
+import { usePaginatedCatalog } from '../hooks/usePaginatedCatalog';
+import { logger } from '../lib/logger';
 
 export function CatalogFeed() {
   const {
@@ -56,17 +58,17 @@ export function CatalogFeed() {
 
   const [priceError, setPriceError] = useState('');
 
-  const [loading, setLoading] = useState(true);
-
-  const [catalogData, setCatalogData] = useState<{
-    products: any[];
-    total: number;
-    filterSummary: string;
-  }>({
-    products: [],
-    total: 0,
-    filterSummary: '',
-  });
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const {
+    products,
+    total,
+    loadingInitial,
+    loadingMore,
+    has_more: hasMoreProducts,
+    error: loadMoreError,
+    loadMore,
+    retry,
+  } = usePaginatedCatalog(filterParams, dataVersion);
 
   const [activeShops, setActiveShops] = useState<any[]>([]);
   const [cityOptions, setCityOptions] = useState<string[]>([]);
@@ -98,151 +100,76 @@ export function CatalogFeed() {
     filterParams.price_max,
   ]);
 
-  /**
-   * Chargement du catalogue.
-   *
-   * IMPORTANT :
-   * getActiveShops(filterParams.city)
-   * sert aux statistiques affichées dans le Hero.
-   *
-   * getActiveShops()
-   * sert à construire la liste complète des villes.
-   *
-   * Cela évite que le select des villes ne devienne
-   * limité à la ville actuellement sélectionnée.
-   */
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (
+      !target ||
+      !hasMoreProducts ||
+      loadMoreError ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMore();
+        }
+      },
+      { rootMargin: '400px 0px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreProducts, loadingInitial]);
+
   useEffect(() => {
     let cancelled = false;
 
-    const loadAllData = async () => {
-      setLoading(true);
-
-      try {
-        const [
-          catalogResult,
-          filteredShopsResult,
-          allShopsResult,
-        ] = await Promise.all([
-          db
-            .getCatalogProducts(filterParams)
-            .catch((error) => {
-              console.error(
-                'Erreur chargement catalogue:',
-                error
-              );
-
-              return {
-                products: [],
-                total: 0,
-                filterSummary: '',
-              };
-            }),
-
-          db
-            .getActiveShops(filterParams.city)
-            .catch((error) => {
-              console.error(
-                'Erreur chargement boutiques filtrées:',
-                error
-              );
-
-              return [];
-            }),
-
-          db
-            .getActiveShops()
-            .catch((error) => {
-              console.error(
-                'Erreur chargement villes:',
-                error
-              );
-
-              return [];
-            }),
-        ]);
-
+    db.getActiveShops()
+      .then((shops) => {
         if (cancelled) return;
 
-        setCatalogData(
-          catalogResult || {
-            products: [],
-            total: 0,
-            filterSummary: '',
-          }
-        );
-
-        setActiveShops(
-          Array.isArray(filteredShopsResult)
-            ? filteredShopsResult
-            : []
-        );
-
-        /**
-         * Liste globale des villes.
-         */
-        const cities = (
-          Array.isArray(allShopsResult)
-            ? allShopsResult
-            : []
-        )
-          .filter(
-            (shop: any) =>
-              shop &&
-              shop.is_active &&
-              shop.status === 'ACTIVE' &&
-              shop.city
-          )
-          .map((shop: any) =>
-            String(shop.city).trim()
-          )
+        const cities = (Array.isArray(shops) ? shops : [])
+          .filter((shop: any) => shop?.is_active && shop?.status === 'ACTIVE' && shop?.city)
+          .map((shop: any) => String(shop.city).trim())
           .filter(Boolean);
 
-        const uniqueCities = Array.from(
-          new Set(cities)
-        ).sort((a, b) =>
-          a.localeCompare(b, 'fr', {
-            sensitivity: 'base',
-          })
-        );
-
-        setCityOptions(uniqueCities);
-      } catch (error) {
+        setCityOptions(Array.from(new Set(cities)).sort((a, b) =>
+          a.localeCompare(b, 'fr', { sensitivity: 'base' })
+        ));
+      })
+      .catch((error) => {
         if (!cancelled) {
-          console.error(
-            'Erreur chargement catalogue:',
-            error
-          );
-
-          setCatalogData({
-            products: [],
-            total: 0,
-            filterSummary: '',
-          });
-
-          setActiveShops([]);
+          logger.error('Erreur chargement villes', error);
+          setCityOptions([]);
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadAllData();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [
-    filterParams.city,
-    filterParams.q,
-    filterParams.category,
-    filterParams.subcategory,
-    filterParams.price_min,
-    filterParams.price_max,
-    filterParams.sort_by,
-    dataVersion,
-  ]);
+  }, [dataVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    db.getActiveShops(filterParams.city)
+      .then((shops) => {
+        if (!cancelled) setActiveShops(Array.isArray(shops) ? shops : []);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          logger.error('Erreur chargement boutiques filtrées', error);
+          setActiveShops([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filterParams.city, dataVersion]);
 
   /**
    * Détermine si au moins un filtre est actif.
@@ -389,7 +316,7 @@ export function CatalogFeed() {
     filterParams.price_min != null ||
     filterParams.price_max != null;
 
-  if (loading) {
+  if (loadingInitial) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
@@ -563,7 +490,7 @@ export function CatalogFeed() {
           },
           {
             label: 'Produits',
-            value: catalogData.total,
+            value: total,
             icon: Grid3X3,
             color: 'text-green-600',
           },
@@ -844,13 +771,7 @@ export function CatalogFeed() {
           <TrendingUp className="w-4 h-4 text-indigo-600" />
 
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-            {hasFilters
-              ? `${catalogData.total} produit${
-                  catalogData.total !== 1
-                    ? 's'
-                    : ''
-                }`
-              : 'Tendances du moment'}
+            {`${total} produit${total !== 1 ? 's' : ''}`}
           </h2>
         </div>
 
@@ -886,7 +807,7 @@ export function CatalogFeed() {
       {/* =====================================================
           PRODUITS
       ===================================================== */}
-      {catalogData.products.length === 0 ? (
+      {products.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-slate-400" />
@@ -921,7 +842,7 @@ export function CatalogFeed() {
               : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
           }`}
         >
-          {catalogData.products.map(
+          {products.map(
             (product: any) => (
               <ProductCard
                 key={product.id}
@@ -931,6 +852,42 @@ export function CatalogFeed() {
               />
             )
           )}
+        </div>
+      )}
+
+      {(hasMoreProducts || loadMoreError) && (
+        <div
+          ref={loadMoreRef}
+          className="flex justify-center py-6"
+          aria-live="polite"
+          aria-busy={loadingMore}
+        >
+          {loadingMore && (
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <span className="animate-spin w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full" />
+              Chargement des produits...
+            </div>
+          )}
+          {loadMoreError && (
+            <button
+              type="button"
+              onClick={() => void retry()}
+              className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              {loadMoreError}
+            </button>
+          )}
+          {!loadingMore &&
+            !loadMoreError &&
+            hasMoreProducts && (
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+              >
+                Charger plus ({products.length}/{total})
+              </button>
+            )}
         </div>
       )}
     </div>

@@ -8,6 +8,8 @@ import { ShopHoursEditor } from './ShopHoursEditor';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
+import { logger } from "../lib/logger";
+
 export function SellerDashboard() {
   const { currentUser, setShopModalData, setProductModalData, handleSelectShopVitrine, handleSelectProductDetail, handleNavigateAnalytics, bumpData, dataVersion } = useApp();
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function SellerDashboard() {
           }
         }
       } catch (error) {
-        console.error('Erreur chargement données vendeur:', error);
+        logger.error('Erreur chargement données vendeur:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -75,7 +77,7 @@ export function SellerDashboard() {
     try {
       await db.deleteProduct(productId);
     } catch (error) {
-      console.warn(`Impossible de supprimer le produit ${productId}.`, error);
+      logger.warn(`Impossible de supprimer le produit ${productId}.`, error);
     } finally {
       setDeleteConfirm(null);
       bumpData();
@@ -88,7 +90,7 @@ export function SellerDashboard() {
       await db.saveProduct({ ...product, in_stock: !product.in_stock, id: product.id });
       bumpData();
     } catch (error) {
-      console.error('Erreur mise à jour du stock:', error);
+      logger.error('Erreur mise à jour du stock:', error);
     }
   };
 

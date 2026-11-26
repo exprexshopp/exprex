@@ -373,11 +373,11 @@
   // ==========================================================================
 
   var originalConsole = {
-    log: console.log.bind(console),
-    debug: console.debug.bind(console),
-    info: console.info.bind(console),
-    warn: console.warn.bind(console),
-    error: console.error.bind(console),
+    log: function () {},
+    debug: function () {},
+    info: function () {},
+    warn: function () {},
+    error: function () {},
   };
 
   ["log", "debug", "info", "warn", "error"].forEach(function (method) {
@@ -807,7 +807,7 @@
   try {
     installUiEventListeners();
   } catch (e) {
-    console.warn("[Manus] Failed to install UI listeners:", e);
+    logger.warn("[Manus] Failed to install UI listeners:", e);
   }
 
   // Mark as initialized
@@ -817,5 +817,5 @@
     forceReport: reportLogs,
   };
 
-  console.debug("[Manus] Debug collector initialized (no rrweb, UI events only)");
+  logger.debug("[Manus] Debug collector initialized (no rrweb, UI events only)");
 })();

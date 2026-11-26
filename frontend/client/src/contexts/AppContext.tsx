@@ -3,6 +3,8 @@ import { CustomUser, Shop, Product, CatalogFilterParams, UserRole } from '../typ
 import { db } from '../services/db';
 import { useLocation } from 'wouter';
 
+import { logger } from "../lib/logger";
+
 export type ViewMode = 'catalog' | 'shop_vitrine' | 'product_detail' | 'dashboard' | 'analytics' | 'moderation';
 
 interface AppContextValue {
@@ -283,7 +285,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await db.saveShop(data);
       bumpData();
     } catch (error) {
-      console.error('Erreur sauvegarde boutique:', error);
+      logger.error('Erreur sauvegarde boutique:', error);
     }
   };
 
@@ -293,7 +295,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   //     bumpData();
   //     setProductModalData({ isOpen: false, product: null });
   //   } catch (error: any) {
-  //     console.error('Erreur sauvegarde produit:', error);
+  //     logger.error('Erreur sauvegarde produit:', error);
   //     // Si l'erreur est 401 Unauthorized, le token a expiré ou l'utilisateur n'est plus connecté
   //     if (error?.response?.status === 401 || error?.status === 401) {
   //       handleOpenAuthModal('Votre session a expiré. Veuillez vous reconnecter.', currentUser?.role);
@@ -318,7 +320,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       bumpData();
       setProductModalData({ isOpen: false, product: null });
     } catch (error: any) {
-      console.error('Erreur sauvegarde produit:', error);
+      logger.error('Erreur sauvegarde produit:', error);
 
       // 1. Si la session a expiré (401)
       if (error?.response?.status === 401 || error?.status === 401) {
@@ -363,7 +365,7 @@ useEffect(() => {
       const result = await db.getUserFavorites(currentUser.id);
       setFavoriteIds(new Set(result.product_ids || []));
     } catch (error) {
-      console.error('Erreur chargement favoris:', error);
+      logger.error('Erreur chargement favoris:', error);
       setFavoriteIds(new Set());
     }
   };
@@ -385,7 +387,7 @@ const toggleFavorite = useCallback(async (productId: string) => {
     return !wasFav;
   } catch (error) {
     setFavoriteIds(favoriteIds);  // Rollback
-    console.error('Erreur toggle favori:', error);
+    logger.error('Erreur toggle favori:', error);
     return wasFav;
   }
 }, [currentUser, favoriteIds]);

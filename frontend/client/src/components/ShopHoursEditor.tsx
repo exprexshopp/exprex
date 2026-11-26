@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, X, ChevronDown, ChevronUp, Save } from 'lucide-react';
 import { Shop, ShopHours, ShopHoursDay } from '../types';
 import { db } from '../services/db';
+import { logger } from '../lib/logger';
 
 interface ShopHoursEditorProps {
   shop: Shop;
@@ -45,7 +46,7 @@ export function ShopHoursEditor({ shop, onClose, onSave }: ShopHoursEditorProps)
           // Fusionne avec les valeurs par défaut pour éviter les jours manquants
           parsedHours = { ...defaultHours, ...parsed };
         } catch (e) {
-          console.warn('Erreur parsing hours:', e);
+          logger.warn('Erreur parsing hours:', e);
         }
       } else if (typeof shop.hours === 'object') {
         parsedHours = { ...defaultHours, ...shop.hours };

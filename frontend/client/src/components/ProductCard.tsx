@@ -7,6 +7,8 @@ import { useApp } from '../contexts/AppContext';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
+import { logger } from "../lib/logger";
+
 interface ProductCardProps {
   product: Product;
   onSelect?: (slug: string) => void;
@@ -29,7 +31,7 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
     try {
       await toggleFavorite(product.id);
     } catch (error) {
-      console.error('Erreur toggle favori:', error);
+      logger.error('Erreur toggle favori:', error);
     } finally {
       setLoadingFav(false);
     }

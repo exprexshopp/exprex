@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { logger } from "../lib/logger";
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 let authToken: string | null = localStorage.getItem('access_token');
 let currentUser: any = null;
@@ -75,10 +77,10 @@ api.interceptors.response.use(
     // Erreurs réseau massives
     if (error.code === 'ERR_NETWORK') {
       consecutiveErrors++;
-      console.warn(`⚠️ Erreur réseau (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+      logger.warn(`⚠️ Erreur réseau (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
 
       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-        console.error('🚨 Trop d\'erreurs réseau consécutives, redirection...');
+        logger.error('🚨 Trop d\'erreurs réseau consécutives, redirection...');
         consecutiveErrors = 0;
         if (!window.location.pathname.includes('/error')) {
           window.location.href = '/error';
@@ -132,7 +134,7 @@ export const auth = {
       gender: data.gender || null,
     };
 
-    console.log('📝 Envoi inscription:', payload);
+    logger.debug('📝 Envoi inscription:', payload);
 
     const response = await api.post('/auth/register', payload);
     const { access_token } = response.data;
@@ -141,7 +143,7 @@ export const auth = {
 
     const userResponse = await api.get('/users/me');
     currentUser = userResponse.data;
-    console.log('✅ Utilisateur créé:', currentUser);
+    logger.debug('✅ Utilisateur créé:', currentUser);
     return currentUser;
   },
 
@@ -168,7 +170,7 @@ export const auth = {
         currentUser = null;
         return null;
       }
-      console.warn('refreshCurrentUser: erreur réseau, session préservée', error?.message);
+      logger.warn('refreshCurrentUser: erreur réseau, session préservée', error?.message);
       return null;
     }
   },
@@ -178,13 +180,13 @@ export const auth = {
 // PRODUCTS
 // ============================================================
 export const products = {
-  getAll: async (params?: any) => {
+  getAll: async (params?: any, signal?: AbortSignal) => {
     const cacheKey = `products_${JSON.stringify(params || {})}`;
     const cached = getCached(cacheKey);
     if (cached) return cached;
 
     return dedupedRequest(cacheKey, async () => {
-      const response = await api.get('/products', { params });
+      const response = await api.get('/products', { params, signal });
       setCached(cacheKey, response.data);
       return response.data;
     });
@@ -459,27 +461,41 @@ export const db = {
   },
 
   // Products
-  getCatalogProducts: async (filters: any) => {
-  const params: any = {};
-  if (filters.city)          params.city        = filters.city;
-  if (filters.q)             params.search      = filters.q;
-  if (filters.category)      params.category    = filters.category;
-  if (filters.subcategory)   params.subcategory = filters.subcategory;
-  if (filters.price_min != null) params.price_min = filters.price_min;
-  if (filters.price_max != null) params.price_max = filters.price_max;
-  if (filters.sort_by)       params.sort_by     = filters.sort_by;
+  getCatalogProducts: async (filters: any, page = 1, pageSize = 24, signal?: AbortSignal) => {
+    const params: any = {};
+    if (filters.city) params.city = filters.city;
+    if (filters.q) params.search = filters.q;
+    if (filters.category) params.category = filters.category;
+    if (filters.subcategory) params.subcategory = filters.subcategory;
+    if (filters.price_min != null) params.price_min = filters.price_min;
+    if (filters.price_max != null) params.price_max = filters.price_max;
+    if (filters.sort_by) params.sort_by = filters.sort_by;
+    params.page = page;
+    params.page_size = pageSize;
 
-  const all = await products.getAll(params);
-  return {
-    products: Array.isArray(all) ? all : [],
-    total:    Array.isArray(all) ? all.length : 0,
-    filterSummary: filters.q
-      ? `Recherche: "${filters.q}"`
-      : filters.city
-        ? `Ville: ${filters.city}`
-        : 'Tous les produits',
-  };
-},
+    const all = await products.getAll(params, signal);
+    const productsList = Array.isArray(all)
+      ? all
+      : Array.isArray(all?.products)
+        ? all.products
+        : [];
+    const total = Array.isArray(all)
+      ? all.length
+      : Number.isFinite(all?.total)
+        ? all.total
+        : productsList.length;
+
+    return {
+      products: productsList,
+      total,
+      has_more: Array.isArray(all) ? false : all?.has_more === true,
+      filterSummary: filters.q
+        ? `Recherche: "${filters.q}"`
+        : filters.city
+          ? `Ville: ${filters.city}`
+          : 'Tous les produits',
+    };
+  },
 
   getProductBySlug: products.getBySlug,
   getProductsForShop: async (shopId: string) => {
@@ -489,13 +505,13 @@ export const db = {
   deleteProduct: products.delete,
 
   saveProduct: async (data: any) => {
-    console.log('📦 saveProduct reçu:', data);
+    logger.debug('📦 saveProduct reçu:', data);
     if (data.id && data.id !== 'undefined' && data.id !== '' && data.id !== null) {
-      console.log('🔄 MISE À JOUR du produit ID:', data.id);
+      logger.debug('🔄 MISE À JOUR du produit ID:', data.id);
       const response = await api.put(`/products/${data.id}`, data);
       return response.data;
     } else {
-      console.log('➕ CRÉATION d\'un nouveau produit');
+      logger.debug('➕ CRÉATION d\'un nouveau produit');
       const response = await api.post('/products', data);
       return response.data;
     }
@@ -521,7 +537,7 @@ export const db = {
       const all = await shops.getAll(city);
       return (all || []).filter((s: any) => s.status === 'ACTIVE' && s.is_active === true);
     } catch (error) {
-      console.error('Erreur chargement boutiques actives:', error);
+      logger.error('Erreur chargement boutiques actives:', error);
       return [];
     }
   },
@@ -531,7 +547,7 @@ export const db = {
       const response = await api.get('/subcategories', { params: { category_id: categoryId } });
       return response.data || [];
     } catch (error) {
-      console.error('Erreur chargement sous-catégories:', error);
+      logger.error('Erreur chargement sous-catégories:', error);
       return [];
     }
   },
@@ -550,7 +566,7 @@ export const db = {
         s.owner?.id === ownerId
       ) || null;
     } catch (error) {
-      console.error('Erreur récupération boutique par propriétaire:', error);
+      logger.error('Erreur récupération boutique par propriétaire:', error);
       return null;
     }
   },
@@ -605,7 +621,7 @@ export const db = {
       if (!Array.isArray(all)) return [];
       return all.map((c: any) => c.name || '');
     } catch (error) {
-      console.error('Erreur chargement villes:', error);
+      logger.error('Erreur chargement villes:', error);
       return [];
     }
   },
@@ -618,7 +634,7 @@ export const db = {
         products: Array.isArray(response.data?.products) ? response.data.products : []
       };
     } catch (error) {
-      console.error('Erreur chargement analytics:', error);
+      logger.error('Erreur chargement analytics:', error);
       return { totalViews: 0, totalWhatsApp: 0, totalRevenue: 0, products: [] };
     }
   },
@@ -648,7 +664,7 @@ export const db = {
       const result = await products.toggleFavorite(userId, productId);
       return result.isFavorite || false;
     } catch (error) {
-      console.error('Erreur toggle favori:', error);
+      logger.error('Erreur toggle favori:', error);
       return false;
     }
   },
@@ -668,7 +684,7 @@ export const db = {
     try {
       return await products.getReviews(productId);
     } catch (error) {
-      console.error('Erreur chargement avis:', error);
+      logger.error('Erreur chargement avis:', error);
       return [];
     }
   },
@@ -676,7 +692,7 @@ export const db = {
     try {
       return await products.saveReview(data);
     } catch (error) {
-      console.error('Erreur sauvegarde avis:', error);
+      logger.error('Erreur sauvegarde avis:', error);
       return null;
     }
   },

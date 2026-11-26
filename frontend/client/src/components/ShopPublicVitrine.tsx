@@ -8,6 +8,8 @@ import { Product } from '../types';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
+import { logger } from "../lib/logger";
+
 export function ShopPublicVitrine() {
   const { 
     selectedShopSlug, 
@@ -45,7 +47,7 @@ export function ShopPublicVitrine() {
               : shopData.hours;
             if (!cancelled) setIsOpen(hoursData ? isShopOpenNow(hoursData) : false);
           } catch (e) {
-            console.warn('Erreur parsing horaires:', e);
+            logger.warn('Erreur parsing horaires:', e);
             if (!cancelled) setIsOpen(false);
           }
 
@@ -58,7 +60,7 @@ export function ShopPublicVitrine() {
           }
         }
       } catch (error) {
-        console.error('Erreur chargement boutique:', error);
+        logger.error('Erreur chargement boutique:', error);
         if (!cancelled) {
           setShop(null);
           setProducts([]);

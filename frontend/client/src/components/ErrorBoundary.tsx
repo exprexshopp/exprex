@@ -2,6 +2,8 @@ import { AlertTriangle, Home, RotateCcw, MessageCircle } from "lucide-react";
 import { Component, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+import { logger } from "../lib/logger";
+
 interface Props {
   children: ReactNode;
 }
@@ -23,28 +25,11 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚨 ErrorBoundary a capturé:', error);
-    console.error('📍 Stack composant:', errorInfo.componentStack);
+    logger.error('🚨 ErrorBoundary a capturé:', error);
+    logger.error('📍 Stack composant:', errorInfo.componentStack);
     this.setState({ errorInfo });
 
-    // ✅ Log vers le backend (visible dans Vercel Runtime Logs)
-    try {
-      const API_BASE = import.meta.env.VITE_API_URL || '/api';
-      fetch(`${API_BASE}/logs/client-error`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: error.message,
-          stack: error.stack?.substring(0, 2000),
-          component_stack: errorInfo.componentStack?.substring(0, 2000),
-          url: window.location.href,
-          user_agent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(() => {});
-    } catch (e) {
-      // Ignorer
-    }
+    logger.error('Pile React capturée', errorInfo.componentStack || '');
   }
 
   handleReset = () => {

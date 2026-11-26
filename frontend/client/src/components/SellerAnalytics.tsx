@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+import { logger } from "../lib/logger";
+
   ArrowLeft,
   BarChart3,
   Eye,
@@ -98,7 +100,7 @@ export function SellerAnalytics() {
         products,
       });
     } catch (error) {
-      console.error('Erreur chargement analytics:', error);
+      logger.error('Erreur chargement analytics:', error);
 
       if (!isRefresh) {
         setAnalytics(EMPTY_ANALYTICS);

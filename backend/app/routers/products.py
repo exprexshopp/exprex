@@ -1,6 +1,6 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, asc, desc
+from sqlalchemy import or_, and_, asc, desc
 from app.database import get_db
 from app.models.product import Product
 from app.models.shop import Shop
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 # ============================================================
 
 def _serialize_product(product: Product, analytics=None, reviews_count=0, favorites_count=0) -> dict:
-    """Sérialise un produit en dict avec les champs attendus par le frontend."""
+    """Sérialise uniquement les champs nécessaires à une carte catalogue."""
     return {
         "id": product.id,
         "shop_id": product.shop_id,
@@ -29,12 +29,10 @@ def _serialize_product(product: Product, analytics=None, reviews_count=0, favori
         "shop_slug": product.shop_slug,
         "shop_whatsapp": product.shop_whatsapp,
         "name": product.name,
-        "description": product.description,
         "slug": product.slug,
         "price": product.price,
         "image": product.image,
         "category": product.category,
-        "subcategory_id": product.subcategory_id,
         "subcategory_name": product.subcategory_name,
         "in_stock": product.in_stock,
         "created_at": product.created_at,
@@ -42,6 +40,26 @@ def _serialize_product(product: Product, analytics=None, reviews_count=0, favori
         "whatsapp_clicks": analytics.whatsapp_clicks if analytics else 0,
         "reviews_count": reviews_count,
         "favorites_count": favorites_count,
+    }
+
+
+def _serialize_catalog_product(product: Product, analytics=None) -> dict:
+    """Champs légers utilisés uniquement par la grille paginée."""
+    return {
+        "id": product.id,
+        "shop_id": product.shop_id,
+        "shop_name": product.shop_name,
+        "shop_slug": product.shop_slug,
+        "name": product.name,
+        "slug": product.slug,
+        "price": product.price,
+        "image": product.image,
+        "category": product.category,
+        "subcategory_name": product.subcategory_name,
+        "in_stock": product.in_stock,
+        "created_at": product.created_at,
+        "views_count": analytics.views_count if analytics else 0,
+        "whatsapp_clicks": analytics.whatsapp_clicks if analytics else 0,
     }
 
 
@@ -58,8 +76,47 @@ async def get_products(
     price_min: float | None = Query(None, ge=0),
     price_max: float | None = Query(None, ge=0),
     sort_by: str | None = Query(None),
+    page: int | None = Query(None),
+    page_size: int | None = Query(None),
+    cursor: str | None = Query(None),
+    limit: int | None = Query(None),
     db: Session = Depends(get_db),
 ):
+    raw_cursor = cursor
+    raw_limit = limit
+    raw_page = page
+    raw_page_size = page_size
+
+    def plain_value(value):
+        if hasattr(value, "default"):
+            value = value.default
+        return value
+
+    cursor = plain_value(cursor)
+    limit = plain_value(limit)
+    page = plain_value(page)
+    page_size = plain_value(page_size)
+
+    try:
+        page = max(1, int(page or 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    try:
+        requested_size = limit or page_size or 24
+        page_size = max(1, min(int(requested_size), 100))
+    except (TypeError, ValueError):
+        page_size = 24
+
+    cursor_mode = isinstance(cursor, str) and bool(cursor)
+    paginated = (
+        not hasattr(raw_page, "default") and raw_page is not None
+    ) or (
+        not hasattr(raw_page_size, "default") and raw_page_size is not None
+    ) or cursor_mode or (
+        not hasattr(raw_limit, "default") and raw_limit is not None
+    )
+
     query = db.query(Product).join(Shop, Product.shop_id == Shop.id)
 
     if category:
@@ -110,12 +167,41 @@ async def get_products(
     if price_max is not None:
         query = query.filter(Product.price <= price_max)
 
+    cursor_product = None
+    if cursor:
+        cursor_product = db.query(Product).filter(Product.id == cursor).first()
+
+    total = query.count()
+
     if sort_by == "price_asc":
-        query = query.order_by(asc(Product.price))
+        query = query.order_by(asc(Product.price), desc(Product.id))
     elif sort_by == "price_desc":
-        query = query.order_by(desc(Product.price))
+        query = query.order_by(desc(Product.price), desc(Product.id))
     else:
-        query = query.order_by(desc(Product.created_at))
+        query = query.order_by(desc(Product.created_at), desc(Product.id))
+
+    if cursor_product:
+        if sort_by == "price_asc":
+            query = query.filter(or_(
+                Product.price > cursor_product.price,
+                and_(Product.price == cursor_product.price, Product.id < cursor_product.id),
+            ))
+        elif sort_by == "price_desc":
+            query = query.filter(or_(
+                Product.price < cursor_product.price,
+                and_(Product.price == cursor_product.price, Product.id < cursor_product.id),
+            ))
+        else:
+            query = query.filter(or_(
+                Product.created_at < cursor_product.created_at,
+                and_(Product.created_at == cursor_product.created_at, Product.id < cursor_product.id),
+            ))
+
+    if paginated:
+        if cursor_mode:
+            query = query.limit(page_size + 1)
+        else:
+            query = query.offset((page - 1) * page_size).limit(page_size)
 
     products = query.all()
     result = []
@@ -123,7 +209,31 @@ async def get_products(
         analytics = db.query(Analytics).filter(
             Analytics.product_id == product.id
         ).first()
-        result.append(_serialize_product(product, analytics=analytics))
+        result.append(
+            _serialize_catalog_product(product, analytics=analytics)
+            if paginated
+            else _serialize_product(product, analytics=analytics)
+        )
+
+    if paginated:
+        if cursor_mode:
+            has_more = len(result) > page_size
+            result = result[:page_size]
+        else:
+            offset = (page - 1) * page_size
+            has_more = (offset + len(result)) < total
+
+        response = {
+            "products": result,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "has_more": has_more,
+        }
+        if cursor_mode:
+            response["next_cursor"] = result[-1]["id"] if response["has_more"] and result else None
+        return response
+
     return result
 
 

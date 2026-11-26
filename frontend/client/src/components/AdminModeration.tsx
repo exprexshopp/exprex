@@ -6,6 +6,8 @@ import { db } from '../services/db';
 import { formatDate } from '../lib/format';
 import { UserRole } from '../types';
 
+import { logger } from "../lib/logger";
+
 type Tab = 'shops' | 'users' | 'logs' | 'categories' | 'cities';
 
 export function AdminModeration() {
@@ -49,7 +51,7 @@ export function AdminModeration() {
       setSubcategories(subcategoriesData || []);
       setCities(citiesData || []);
     } catch (error) {
-      console.error('Erreur chargement données admin:', error);
+      logger.error('Erreur chargement données admin:', error);
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur lors de l\'approbation de la boutique :', error);
+      logger.error('Erreur lors de l\'approbation de la boutique :', error);
     }
   };
 
@@ -97,7 +99,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur lors du rejet de la boutique :', error);
+      logger.error('Erreur lors du rejet de la boutique :', error);
     }
   };
 
@@ -108,7 +110,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur suppression utilisateur:', error);
+      logger.error('Erreur suppression utilisateur:', error);
     }
   };
 
@@ -129,7 +131,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur sauvegarde utilisateur:', error);
+      logger.error('Erreur sauvegarde utilisateur:', error);
     }
   };
 
@@ -141,7 +143,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur création utilisateur:', error);
+      logger.error('Erreur création utilisateur:', error);
     }
   };
 
@@ -153,7 +155,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur création catégorie:', error);
+      logger.error('Erreur création catégorie:', error);
     }
   };
 
@@ -165,7 +167,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur mise à jour catégorie:', error);
+      logger.error('Erreur mise à jour catégorie:', error);
     }
   };
 
@@ -175,7 +177,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur suppression catégorie:', error);
+      logger.error('Erreur suppression catégorie:', error);
     }
   };
 
@@ -193,7 +195,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur création sous-catégorie:', error);
+      logger.error('Erreur création sous-catégorie:', error);
     }
   };
 
@@ -211,7 +213,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur mise à jour sous-catégorie:', error);
+      logger.error('Erreur mise à jour sous-catégorie:', error);
     }
   };
 
@@ -221,7 +223,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur suppression sous-catégorie:', error);
+      logger.error('Erreur suppression sous-catégorie:', error);
     }
   };
 
@@ -233,7 +235,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur création ville:', error);
+      logger.error('Erreur création ville:', error);
     }
   };
 
@@ -245,7 +247,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur mise à jour ville:', error);
+      logger.error('Erreur mise à jour ville:', error);
     }
   };
 
@@ -255,7 +257,7 @@ export function AdminModeration() {
       await loadData();
       bumpData();
     } catch (error) {
-      console.error('Erreur suppression ville:', error);
+      logger.error('Erreur suppression ville:', error);
     }
   };
 

@@ -34,7 +34,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     traceback.print_exc()
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Erreur interne: {str(exc)}"},
+        content={"detail": "Erreur interne. Consultez les journaux serveur."},
         headers={
             "Access-Control-Allow-Origin": request.headers.get("origin", "https://exprex.vercel.app"),
             "Access-Control-Allow-Credentials": "true",

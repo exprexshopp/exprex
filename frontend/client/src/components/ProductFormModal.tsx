@@ -6,6 +6,8 @@ import { db } from '../services/db';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 
+import { logger } from "../lib/logger";
+
 export function ProductFormModal() {
   const { productModalData, setProductModalData, currentUser, handleSaveProduct, dataVersion } = useApp();
   const { isOpen, product } = productModalData;
@@ -38,7 +40,7 @@ export function ProductFormModal() {
           setShopId(shopData?.id || null);
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération de la boutique", error);
+        logger.error("Erreur lors de la récupération de la boutique", error);
         if (!cancelled) setShopId(null);
       } finally {
         if (!cancelled) setLoadingShop(false);
@@ -57,7 +59,7 @@ export function ProductFormModal() {
   //       const data = await db.getCategories();
   //       setCategories(Array.isArray(data) ? data : []);
   //     } catch (error) {
-  //       console.error('Erreur chargement catégories:', error);
+  //       logger.error('Erreur chargement catégories:', error);
   //       setCategories([]);
   //     } finally {
   //       setLoading(false);
@@ -74,7 +76,7 @@ export function ProductFormModal() {
       const data = await db.getCategories();
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Erreur chargement catégories:', error);
+      logger.error('Erreur chargement catégories:', error);
       setCategories([]);
     } finally {
       setLoading(false);
@@ -94,7 +96,7 @@ export function ProductFormModal() {
         const data = await db.getSubcategories(selectedCatId);
         setSubcategories(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Erreur chargement sous-catégories:', error);
+        logger.error('Erreur chargement sous-catégories:', error);
         setSubcategories([]);
       }
     };
@@ -163,13 +165,13 @@ export function ProductFormModal() {
 //     const shop = await db.getShopByOwner(currentUser.id);
     
 //     if (!shop) {
-//       console.error('❌ Aucune boutique trouvée pour cet utilisateur');
+//       logger.error('❌ Aucune boutique trouvée pour cet utilisateur');
 //       alert('Vous devez créer une boutique avant d\'ajouter des produits.');
 //       return;
 //     }
 
-//     console.log('🏪 Boutique trouvée:', shop);
-//     console.log('📦 Données produit envoyées:', {
+//     logger.debug('🏪 Boutique trouvée:', shop);
+//     logger.debug('📦 Données produit envoyées:', {
 //       ...form,
 //       price: parseFloat(form.price),
 //       shop_id: shop.id,
@@ -185,7 +187,7 @@ export function ProductFormModal() {
     
 //     setProductModalData({ isOpen: false, product: null });
 //   } catch (error) {
-//     console.error('❌ Erreur lors de la sauvegarde du produit:', error);
+//     logger.error('❌ Erreur lors de la sauvegarde du produit:', error);
 //     alert('Erreur lors de la sauvegarde du produit. Veuillez réessayer.');
 //   }
 // };
@@ -217,16 +219,16 @@ const handleSubmit = async () => {
     // ✅ SI C'EST UNE MODIFICATION, AJOUTER L'ID
     if (product && product.id) {
       productData.id = product.id;
-      console.log('🔄 MODIFICATION - ID:', product.id);
+      logger.debug('🔄 MODIFICATION - ID:', product.id);
     } else {
-      console.log('➕ NOUVEAU PRODUIT');
+      // logger.debug('➕ NOUVEAU PRODUIT');
     }
 
-    console.log('📦 Envoi:', productData);
+    // logger.debug('📦 Envoi:', productData);
     await handleSaveProduct(productData);
     setProductModalData({ isOpen: false, product: null });
   } catch (error) {
-    console.error('❌ Erreur:', error);
+    // logger.error('❌ Erreur:', error);
   }
 };
 
@@ -351,7 +353,7 @@ const handleSubmit = async () => {
                       const url = await db.uploadImage(file);
                       setForm(f => ({ ...f, image: url }));
                     } catch (error) {
-                      console.error('Erreur upload image:', error);
+                      logger.error('Erreur upload image:', error);
                     } finally {
                       setUploadingImage(false);
                       e.target.value = '';

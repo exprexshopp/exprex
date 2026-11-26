@@ -4,6 +4,8 @@ import { X, User, Store, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 
+import { logger } from "../lib/logger";
+
 export function AuthModal() {
   const { authModalState, setAuthModalState, setCurrentUser, bumpData } = useApp();
   const { isOpen, actionReason, initialRole } = authModalState;
@@ -109,7 +111,7 @@ export function AuthModal() {
       bumpData();
       close();
     } catch (error: any) {
-      console.error('Erreur inscription:', error);
+      logger.error('Erreur inscription:', error);
       const message = error?.response?.data?.detail || 'Erreur lors de l\'inscription';
       setError(message);
     } finally {

@@ -1,6 +1,8 @@
 // Design: Afrique Moderne — fiche produit détaillée avec avis et CTA WhatsApp
 import React, { useEffect, useState } from 'react';
 import {
+import { logger } from "../lib/logger";
+
   ArrowLeft, Heart, Share2, Star, Eye, MessageCircle,
   Store, MapPin, ShoppingBag, Clock, CheckCircle, XCircle
 } from 'lucide-react';
@@ -70,11 +72,11 @@ export function ProductDetail() {
 
           // Analytics : enregistrer la vue sans modifier l'état global React
           void db.recordView(productData.id).catch((error) => {
-            console.warn("Impossible d'enregistrer la vue du produit:", error);
+            logger.warn("Impossible d'enregistrer la vue du produit:", error);
           });
         }
       } catch (error) {
-        console.error('Erreur chargement produit:', error);
+        logger.error('Erreur chargement produit:', error);
         if (!cancelled) {
           setProduct(null);
           setReviews([]);
@@ -146,7 +148,7 @@ export function ProductDetail() {
       const reviewsData = await db.getProductReviews(product.id);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
     } catch (error) {
-      console.error('Erreur sauvegarde avis:', error);
+      logger.error('Erreur sauvegarde avis:', error);
     }
   };
 

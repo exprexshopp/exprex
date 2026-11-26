@@ -5,6 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { Shop, ShopThemePreset } from '../types';
 
+import { logger } from "../lib/logger";
+
 const THEMES: { value: ShopThemePreset; label: string; color: string }[] = [
   { value: 'modern', label: 'Moderne', color: '#0284C7' },
   { value: 'elegant', label: 'Élégant', color: '#1e293b' },
@@ -36,7 +38,7 @@ export function ShopFormModal() {
         const result = await db.getCities();
         setCities(Array.isArray(result) ? result : ['Douala', 'Yaounde', 'Bafoussam', 'Bamenda']);
       } catch (error) {
-        console.error('Erreur chargement villes:', error);
+        logger.error('Erreur chargement villes:', error);
         setCities(['Douala', 'Yaounde', 'Bafoussam', 'Bamenda']);
       } finally {
         setLoading(false);
@@ -71,7 +73,7 @@ export function ShopFormModal() {
       const url = await db.uploadImage(file);
       setForm(f => ({ ...f, logo: url }));
     } catch (error) {
-      console.error('Erreur upload logo:', error);
+      logger.error('Erreur upload logo:', error);
     } finally {
       setIsUploadingLogo(false);
       event.target.value = '';
@@ -92,7 +94,7 @@ export function ShopFormModal() {
     await handleSaveShop(shopData);
     setShopModalData({ isOpen: false, shop: null });
   } catch (error) {
-    console.error('Erreur sauvegarde boutique:', error);
+    logger.error('Erreur sauvegarde boutique:', error);
   }
 };
 
