@@ -4,8 +4,8 @@ import { X, Store, MapPin, Phone, Palette } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { Shop, ShopThemePreset } from '../types';
-
 import { logger } from "../lib/logger";
+
 
 const THEMES: { value: ShopThemePreset; label: string; color: string }[] = [
   { value: 'modern', label: 'Moderne', color: '#0284C7' },

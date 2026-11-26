@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Store, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
-
 import { logger } from "../lib/logger";
+
 
 export function AuthModal() {
   const { authModalState, setAuthModalState, setCurrentUser, bumpData } = useApp();

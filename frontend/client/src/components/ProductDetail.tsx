@@ -1,7 +1,6 @@
 // Design: Afrique Moderne — fiche produit détaillée avec avis et CTA WhatsApp
 import React, { useEffect, useState } from 'react';
 import {
-import { logger } from "../lib/logger";
 
   ArrowLeft, Heart, Share2, Star, Eye, MessageCircle,
   Store, MapPin, ShoppingBag, Clock, CheckCircle, XCircle
@@ -12,6 +11,7 @@ import { formatPrice, formatDate, isShopOpenNow } from '../lib/format';
 import { ImageGallery } from './ImageGallery';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
+import { logger } from "../lib/logger";
 
 export function ProductDetail() {
   const {

@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { CustomUser, Shop, Product, CatalogFilterParams, UserRole } from '../types';
 import { db } from '../services/db';
 import { useLocation } from 'wouter';
-
 import { logger } from "../lib/logger";
+
 
 export type ViewMode = 'catalog' | 'shop_vitrine' | 'product_detail' | 'dashboard' | 'analytics' | 'moderation';
 

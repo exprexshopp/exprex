@@ -7,8 +7,8 @@ import { formatPrice, isShopOpenNow } from '../lib/format';
 import { Product } from '../types';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
-
 import { logger } from "../lib/logger";
+
 
 export function ShopPublicVitrine() {
   const { 

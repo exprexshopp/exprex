@@ -7,8 +7,8 @@ import { formatPrice } from '../lib/format';
 import { ShopHoursEditor } from './ShopHoursEditor';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
-
 import { logger } from "../lib/logger";
+
 
 export function SellerDashboard() {
   const { currentUser, setShopModalData, setProductModalData, handleSelectShopVitrine, handleSelectProductDetail, handleNavigateAnalytics, bumpData, dataVersion } = useApp();

@@ -6,8 +6,8 @@ import { formatPrice } from '../lib/format';
 import { useApp } from '../contexts/AppContext';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
-
 import { logger } from "../lib/logger";
+
 
 interface ProductCardProps {
   product: Product;

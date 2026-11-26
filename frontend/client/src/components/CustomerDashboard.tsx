@@ -4,8 +4,8 @@ import { Heart, ShoppingBag, Star, Eye, MessageCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice, formatDate } from '../lib/format';
-
 import { logger } from "../lib/logger";
+
 
 export function CustomerDashboard() {
   const { currentUser, handleSelectProductDetail, handleQuickWhatsApp } = useApp();

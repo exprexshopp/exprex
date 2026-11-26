@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { db } from '../services/db';
 import { catalogCacheGet, catalogCacheInvalidate, catalogCacheSet } from '../lib/catalogCache';
-import { logger } from '../lib/logger';
+import { logger } from "../lib/logger";
 
 export const CATALOG_PAGE_SIZE = 24;
 

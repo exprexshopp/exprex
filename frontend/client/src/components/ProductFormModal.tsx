@@ -5,8 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
-
 import { logger } from "../lib/logger";
+
 
 export function ProductFormModal() {
   const { productModalData, setProductModalData, currentUser, handleSaveProduct, dataVersion } = useApp();

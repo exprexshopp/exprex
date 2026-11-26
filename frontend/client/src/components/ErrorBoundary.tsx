@@ -1,8 +1,8 @@
 import { AlertTriangle, Home, RotateCcw, MessageCircle } from "lucide-react";
 import { Component, ReactNode } from "react";
 import { cn } from "@/lib/utils";
-
 import { logger } from "../lib/logger";
+
 
 interface Props {
   children: ReactNode;

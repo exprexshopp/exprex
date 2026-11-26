@@ -21,7 +21,7 @@ import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { ProductCard } from './ProductCard';
 import { usePaginatedCatalog } from '../hooks/usePaginatedCatalog';
-import { logger } from '../lib/logger';
+import { logger } from "../lib/logger";
 
 export function CatalogFeed() {
   const {

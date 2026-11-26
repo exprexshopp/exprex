@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-import { logger } from "../lib/logger";
 
   ArrowLeft,
   BarChart3,
@@ -16,6 +15,7 @@ import { logger } from "../lib/logger";
 import { useApp } from '../contexts/AppContext';
 import { db } from '../services/db';
 import { formatPrice } from '../lib/format';
+import { logger } from "../lib/logger";
 
 type AnalyticsProduct = {
   id: string;

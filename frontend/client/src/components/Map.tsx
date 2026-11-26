@@ -1,4 +1,3 @@
-import { logger } from "../lib/logger";
 
 /**
  * GOOGLE MAPS FRONTEND INTEGRATION - ESSENTIAL GUIDE
@@ -81,6 +80,7 @@ import { logger } from "../lib/logger";
 import { useEffect, useRef } from "react";
 import { usePersistFn } from "@/hooks/usePersistFn";
 import { cn } from "@/lib/utils";
+import { logger } from "../lib/logger";
 
 declare global {
   interface Window {

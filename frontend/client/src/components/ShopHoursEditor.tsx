@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, X, ChevronDown, ChevronUp, Save } from 'lucide-react';
 import { Shop, ShopHours, ShopHoursDay } from '../types';
 import { db } from '../services/db';
-import { logger } from '../lib/logger';
+import { logger } from "../lib/logger";
 
 interface ShopHoursEditorProps {
   shop: Shop;
