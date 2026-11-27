@@ -29,6 +29,7 @@ def _serialize_product(product: Product, analytics=None, reviews_count=0, favori
         "shop_slug": product.shop_slug,
         "shop_whatsapp": product.shop_whatsapp,
         "name": product.name,
+        "description": product.description,
         "slug": product.slug,
         "price": product.price,
         "image": product.image,
