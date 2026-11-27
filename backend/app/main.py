@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from app.config import settings
 from app.database import engine, Base
-from app.routers import auth, users, shops, products, categories, cities, upload, subcategories, moderation_logs, analytics, logs, chatbot_bridge
+# from app.routers import auth, users, shops, products, categories, cities, upload, subcategories, moderation_logs, analytics, logs, chatbot_bridge
+from app.routers import (
+    auth, users, shops, products, categories, cities, upload,
+    subcategories, moderation_logs, analytics, logs, chatbot_bridge,
+)
 
 # Creation des tables
 Base.metadata.create_all(bind=engine)

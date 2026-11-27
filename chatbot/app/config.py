@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -10,11 +9,14 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "sqlite:///./chatbot.db"
 
-    # Meta WhatsApp Cloud API
+    # Meta WhatsApp Cloud API + Embedded Signup
     META_VERIFY_TOKEN: str = "exprex_verify_token_change_me"
+    META_APP_ID: str = ""
     META_APP_SECRET: str = ""
-    META_ACCESS_TOKEN: str = ""
+    META_CONFIG_ID: str = ""  # Embedded Signup configuration ID
+    META_ACCESS_TOKEN: str = ""  # fallback / app-level token
     META_API_VERSION: str = "v21.0"
+    META_GRAPH_URL: str = "https://graph.facebook.com"
 
     # LLM
     OPENAI_API_KEY: str = ""

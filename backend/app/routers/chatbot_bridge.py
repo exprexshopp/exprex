@@ -105,6 +105,15 @@ async def chatbot_health():
         return {"bridge": "ok", "chatbot": {"status": "down", "detail": e.detail}}
 
 
+@router.get("/meta/config")
+async def meta_sdk_config(current_user: User = Depends(get_current_user)):
+    """
+    Config publique Embedded Signup (app_id + config_id) pour le frontend.
+    Nécessite d'être connecté (vendeur).
+    """
+    return await _chatbot_request("GET", "/api/oauth/meta/config")
+
+
 @router.get("/shops/{shop_id}/status")
 async def get_bot_status(
     shop_id: str,
@@ -114,7 +123,9 @@ async def get_bot_status(
     """État du bot pour une boutique (404 chatbot → non configuré)."""
     _get_owned_shop(shop_id, current_user, db)
     try:
-        return await _chatbot_request("GET", f"/api/shops/{shop_id}")
+        data = await _chatbot_request("GET", f"/api/shops/{shop_id}")
+        data["configured"] = True
+        return data
     except HTTPException as e:
         if e.status_code == 404:
             return {
@@ -126,6 +137,55 @@ async def get_bot_status(
         raise
 
 
+@router.post("/shops/{shop_id}/embedded-signup")
+async def complete_embedded_signup(
+    shop_id: str,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Finalise Embedded Signup Meta pour la boutique du vendeur.
+
+    Body (issu du SDK FB + événement WA_EMBEDDED_SIGNUP) :
+      code et/ou access_token
+      phone_number_id, waba_id, display_phone (recommandés)
+      tone, welcome_message (optionnels)
+    """
+    shop = _get_owned_shop(shop_id, current_user, db)
+    payload = {
+        "shop_id": shop.id,
+        "shop_name": shop.name,
+        "shop_slug": shop.slug,
+        "code": data.get("code"),
+        "access_token": data.get("access_token"),
+        "phone_number_id": data.get("phone_number_id"),
+        "waba_id": data.get("waba_id"),
+        "display_phone": data.get("display_phone") or shop.whatsapp_number,
+        "tone": data.get("tone") or "professionnel et amical",
+        "system_prompt": data.get("system_prompt"),
+        "welcome_message": data.get("welcome_message")
+        or f"Bonjour ! Bienvenue chez {shop.name}. Comment puis-je vous aider ?",
+        "business_hours": shop.hours,
+    }
+    result = await _chatbot_request(
+        "POST", "/api/oauth/meta/embedded-signup", json=payload
+    )
+
+    products = _products_payload(db, shop.id)
+    if products:
+        await _chatbot_request(
+            "POST",
+            f"/api/shops/{shop.id}/products-sync",
+            json={"products": products},
+        )
+        result = await _chatbot_request("GET", f"/api/shops/{shop.id}")
+
+    if isinstance(result, dict):
+        result["configured"] = True
+    return result
+
+
 @router.post("/shops/{shop_id}/connect")
 async def connect_bot(
     shop_id: str,
@@ -134,11 +194,8 @@ async def connect_bot(
     db: Session = Depends(get_db),
 ):
     """
-    Connecte le WhatsApp Business de la boutique au chatbot.
-    Body attendu:
-      phone_number_id (requis)
-      access_token (optionnel si token global Meta côté chatbot)
-      display_phone, waba_id, tone, system_prompt, welcome_message (optionnels)
+    Connexion manuelle (fallback admin / debug).
+    Préférer POST .../embedded-signup pour les vendeurs.
     """
     shop = _get_owned_shop(shop_id, current_user, db)
     phone_number_id = (data.get("phone_number_id") or "").strip()
@@ -161,7 +218,6 @@ async def connect_bot(
     }
     result = await _chatbot_request("POST", "/api/shops/connect", json=payload)
 
-    # Sync produits immédiatement après connexion
     products = _products_payload(db, shop.id)
     if products:
         await _chatbot_request(
