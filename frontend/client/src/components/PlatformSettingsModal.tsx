@@ -71,7 +71,7 @@ export function PlatformSettingsModal() {
           {/* Info */}
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <Info className="w-3.5 h-3.5" />
-            <span className="inline-flex items-left">eXpress Shop - marketplace Cameroon</span>
+            <span className="inline-flex items-left">eXpress Shop</span>
           </div>
         </div>
       </div>
