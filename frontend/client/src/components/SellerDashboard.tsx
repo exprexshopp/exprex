@@ -8,6 +8,7 @@ import { ShopHoursEditor } from './ShopHoursEditor';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 import { logger } from "../lib/logger";
+import { SellerBotPanel } from './SellerBotPanel';
 
 
 export function SellerDashboard() {
@@ -211,6 +212,14 @@ export function SellerDashboard() {
 
             </div>
           </div>
+
+          {shop && (
+            <SellerBotPanel
+              shopId={shop.id}
+              shopName={shop.name}
+              defaultWhatsapp={shop.whatsapp_number}
+            />
+          )}
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">

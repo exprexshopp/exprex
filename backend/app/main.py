@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from app.config import settings
 from app.database import engine, Base
-from app.routers import auth, users, shops, products, categories, cities, upload, subcategories, moderation_logs, analytics, logs
+from app.routers import auth, users, shops, products, categories, cities, upload, subcategories, moderation_logs, analytics, logs, chatbot_bridge
 
 # Creation des tables
 Base.metadata.create_all(bind=engine)
@@ -58,6 +58,7 @@ app.include_router(subcategories.router)
 app.include_router(moderation_logs.router)
 app.include_router(analytics.router)
 app.include_router(logs.router)
+app.include_router(chatbot_bridge.router)
 
 @app.get("/api/health")
 async def health_check():
