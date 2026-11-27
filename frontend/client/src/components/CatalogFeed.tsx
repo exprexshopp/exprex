@@ -351,10 +351,10 @@ export function CatalogFeed() {
             <div>
               <span className="inline-block text-xs font-bold bg-white/20 text-white px-2.5 py-1 rounded-full mb-2">
                 {currentUser.role === 'SELLER'
-                  ? '🏪 Vendeur'
+                  ? '🛍️ Vendeur'
                   : currentUser.role === 'ADMIN'
-                  ? '🛡️ Admin'
-                  : '👤 Client'}
+                    ? '⚙️ Admin'
+                    : '👤 Client'}
               </span>
 
               <h1 className="text-white text-2xl font-bold mb-1">
@@ -380,14 +380,14 @@ export function CatalogFeed() {
 
                 {(currentUser.role === 'ADMIN' ||
                   currentUser.is_staff) && (
-                  <button
-                    type="button"
-                    onClick={handleNavigateModeration}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-all active:scale-95"
-                  >
-                    Console Admin
-                  </button>
-                )}
+                    <button
+                      type="button"
+                      onClick={handleNavigateModeration}
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-all active:scale-95"
+                    >
+                      Console Admin
+                    </button>
+                  )}
 
                 <button
                   type="button"
@@ -421,7 +421,7 @@ export function CatalogFeed() {
                 </span>
               </h1>
 
-              <p className="text-indigo-200 text-sm mb-2">
+              {/* <p className="text-indigo-200 text-sm mb-2">
                 <strong className="text-white">
                   {activeShops.length} boutiques
                 </strong>{' '}
@@ -429,7 +429,7 @@ export function CatalogFeed() {
                 <strong className="text-white">
                   {activeCityCount} villes
                 </strong>
-              </p>
+              </p> */}
 
               <div className="flex gap-3 mb-5 flex-wrap">
                 <span className="flex items-center gap-1 text-green-300 text-xs font-medium">
@@ -565,11 +565,10 @@ export function CatalogFeed() {
             onClick={() =>
               setIsCategoryDrawerOpen(true)
             }
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${
-              filterParams.category
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${filterParams.category
                 ? 'bg-indigo-600 text-white border-indigo-600'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
-            }`}
+              }`}
           >
             <Grid3X3 className="w-3.5 h-3.5" />
 
@@ -600,11 +599,10 @@ export function CatalogFeed() {
                 (current) => !current
               )
             }
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${
-              hasPriceFilter
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors shrink-0 ${hasPriceFilter
                 ? 'bg-amber-500 text-white border-amber-500'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
-            }`}
+              }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             Prix
@@ -780,11 +778,10 @@ export function CatalogFeed() {
             type="button"
             onClick={() => setGridCols(2)}
             aria-label="Afficher en grille"
-            className={`p-1.5 rounded-lg transition-colors ${
-              gridCols === 2
+            className={`p-1.5 rounded-lg transition-colors ${gridCols === 2
                 ? 'bg-indigo-100 text-indigo-600'
                 : 'text-slate-400 hover:bg-slate-100'
-            }`}
+              }`}
           >
             <Grid3X3 className="w-4 h-4" />
           </button>
@@ -793,11 +790,10 @@ export function CatalogFeed() {
             type="button"
             onClick={() => setGridCols(3)}
             aria-label="Afficher en liste"
-            className={`p-1.5 rounded-lg transition-colors ${
-              gridCols === 3
+            className={`p-1.5 rounded-lg transition-colors ${gridCols === 3
                 ? 'bg-indigo-100 text-indigo-600'
                 : 'text-slate-400 hover:bg-slate-100'
-            }`}
+              }`}
           >
             <List className="w-4 h-4" />
           </button>
@@ -836,11 +832,10 @@ export function CatalogFeed() {
         </div>
       ) : (
         <div
-          className={`grid gap-3 ${
-            gridCols === 2
+          className={`grid gap-3 ${gridCols === 2
               ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
               : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-          }`}
+            }`}
         >
           {products.map(
             (product: any) => (
