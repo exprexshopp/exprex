@@ -12,6 +12,7 @@ import { ImageGallery } from './ImageGallery';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 import { logger } from "../lib/logger";
+import { openExprexChat } from './ChatAssistModal';
 
 export function ProductDetail() {
   const {
@@ -247,14 +248,23 @@ export function ProductDetail() {
             </p>
           </div>
 
-          <button
-            onClick={() => handleQuickWhatsApp(product)}
-            disabled={!product.in_stock}
-            className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-lg rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-green-200"
-          >
-            <MessageCircle className="w-6 h-6" />
-            Commander sur WhatsApp
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => openExprexChat(product)}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+            >
+              <MessageCircle className="w-6 h-6" />
+              Assistant chat
+            </button>
+            <button
+              onClick={() => handleQuickWhatsApp(product)}
+              disabled={!product.in_stock}
+              className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-lg rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+            >
+              <MessageCircle className="w-6 h-6" />
+              WhatsApp
+            </button>
+          </div>
 
           <div className="flex gap-3">
             <button
