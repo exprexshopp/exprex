@@ -22,6 +22,8 @@ import { CategoryDrawer } from './components/CategoryDrawer';
 import { ShopsDrawer } from './components/ShopsDrawer';
 import { AuthModal } from './components/AuthModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
+import { ChatAssistModal } from './components/ChatAssistModal';
+import { ExprexChatWidget } from './components/ExprexChatWidget';
 import { ShopFormModal } from './components/ShopFormModal';
 import { ProductFormModal } from './components/ProductFormModal';
 import { PlatformSettingsModal } from './components/PlatformSettingsModal';
@@ -77,6 +79,7 @@ function AppContent() {
 
       <AuthModal />
 
+      {/* Commande vendeur — inchangé */}
       <WhatsAppModal
         isOpen={whatsAppModalData.isOpen}
         product={whatsAppModalData.product}
@@ -87,6 +90,10 @@ function AppContent() {
           })
         }
       />
+
+      {/* Assistant IA plateforme (en plus de WhatsApp) */}
+      <ChatAssistModal />
+      <ExprexChatWidget userId={currentUser?.id ?? null} />
 
       <ShopFormModal />
       <ProductFormModal />

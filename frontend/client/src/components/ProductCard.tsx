@@ -7,6 +7,7 @@ import { useApp } from '../contexts/AppContext';
 import { SafeImage } from './SafeImage';
 import { getImageUrl } from '@/lib/imageUrl';
 import { logger } from "../lib/logger";
+import { openExprexChat } from './ChatAssistModal';
 
 
 interface ProductCardProps {
@@ -45,6 +46,11 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation();
     onWhatsApp(product);
+  };
+
+  const handleChat = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openExprexChat(product);
   };
 
   const avgRating = product.reviews_count && product.reviews_count > 0 ? 4.5 : null;
@@ -105,14 +111,25 @@ export function ProductCard({ product, onSelect, onClick, onWhatsApp }: ProductC
 
         <div className="flex items-center justify-between gap-2">
           <span className="text-base font-bold text-slate-900 dark:text-white">{formatPrice(product.price)}</span>
-          <button
-            onClick={handleWhatsApp}
-            disabled={!product.in_stock}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl transition-all active:scale-95 shadow-sm shadow-green-200"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>WA</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleChat}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all active:scale-95 shadow-sm shadow-indigo-200"
+              title="Assistant Exprex"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Chat</span>
+            </button>
+            <button
+              onClick={handleWhatsApp}
+              disabled={!product.in_stock}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl transition-all active:scale-95 shadow-sm shadow-green-200"
+              title="Commander sur WhatsApp"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WA</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
