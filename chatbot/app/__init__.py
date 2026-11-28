@@ -1,1 +1,1 @@
-# Exprex AI Seller — chatbot module
+# Exprex AI Shopping — module chatbot web
