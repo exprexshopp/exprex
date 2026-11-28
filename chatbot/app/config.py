@@ -2,21 +2,17 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Exprex AI Seller"
+    """
+    Variables d'environnement déjà intégrées — ne pas renommer.
+    Toute variable inconnue dans .env est ignorée (extra=ignore).
+    """
+
+    APP_NAME: str = "Exprex AI Shopping"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8001
 
     DATABASE_URL: str = "sqlite:///./chatbot.db"
-
-    # Meta WhatsApp Cloud API + Embedded Signup
-    META_VERIFY_TOKEN: str = "exprex_verify_token_change_me"
-    META_APP_ID: str = ""
-    META_APP_SECRET: str = ""
-    META_CONFIG_ID: str = ""  # Embedded Signup configuration ID
-    META_ACCESS_TOKEN: str = ""  # fallback / app-level token
-    META_API_VERSION: str = "v21.0"
-    META_GRAPH_URL: str = "https://graph.facebook.com"
 
     # LLM
     OPENAI_API_KEY: str = ""
@@ -26,6 +22,17 @@ class Settings(BaseSettings):
 
     # Exprex
     EXPREX_FRONTEND_URL: str = "https://exprex.vercel.app"
+    EXPREX_API_URL: str = ""
+
+    # Sessions / perf
+    SESSION_TTL_HOURS: int = 72
+    MAX_HISTORY_MESSAGES: int = 20
+    # Cache catalogue en mémoire (secondes) — 0 = désactivé
+    CATALOG_CACHE_TTL: int = 60
+    # Limite produits injectés dans le prompt
+    CATALOG_PROMPT_LIMIT: int = 40
+    LLM_MAX_TOKENS: int = 500
+    LLM_TEMPERATURE: float = 0.4
 
     class Config:
         env_file = ".env"

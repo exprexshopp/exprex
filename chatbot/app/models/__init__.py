@@ -1,5 +1,5 @@
-from app.models.shop_bot import ShopBot
-from app.models.conversation import Conversation
-from app.models.message import Message
+from app.models.session import ChatSession
+from app.models.message import ChatMessage
+from app.models.catalog import CatalogSnapshot
 
-__all__ = ["ShopBot", "Conversation", "Message"]
+__all__ = ["ChatSession", "ChatMessage", "CatalogSnapshot"]
